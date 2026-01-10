@@ -1,51 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>My Page</title>
+  <title>My QR</title>
 
-  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1b1b1b">
 
+  <link rel="manifest" href="manifest.json">
+
+  <!-- QRコード生成ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #qrcode {
+      background: #ffffff;
+      padding: 20px;
+      display: inline-block;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      margin-top: 10px;
+    }
+    .note {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #555;
+    }
+    .scan-btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 14px 24px;
+      background: #1b1b1b;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+  </style>
 </head>
+
 <body>
 
 <h1>マイQRコード</h1>
+
+<p>相手にこのQRを読み取ってもらってください</p>
+
 <div id="qrcode"></div>
+
+<p class="note">
+  ※ スマホのカメラではなく<br>
+  このイベントアプリの「QRを読み取る」からスキャンしてください
+</p>
+
+<a href="scan.html" class="scan-btn">
+  QRを読み取る
+</a>
 
 <script type="module">
   import { auth } from "./firebase.js";
   import { registerUser } from "./app.js";
 
   auth.onAuthStateChanged(user => {
-    if (user) {
-      registerUser(user.uid);
-      new QRCode(document.getElementById("qrcode"), user.uid);
-    }
-  });
+    if (!user) return;
 
- if ("serviceWorker" in navigator) {
- navigator.serviceWorker.register("sw.js");
-
-  }
-</script>
-
-<hr>
-
-<a href="scan.html" style="
-  display: inline-block;
-  margin-top: 20px;
-  padding: 12px 20px;
-  background: #1b1b1b;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-size: 16px;
-">
-  QRを読み取る
-</a>
-
-
-</body>
-</html>
+    // Firestoreにユーザー登録
+    registerUser(user.uid);
