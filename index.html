@@ -29,6 +29,57 @@
     navigator.serviceWorker.register("sw.js");
   }
 </script>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>My Page</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1b1b1b">
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+</head>
+<body>
+
+<h1>マイQRコード</h1>
+<div id="qrcode"></div>
+
+<script type="module">
+  import { auth } from "./firebase.js";
+  import { registerUser } from "./app.js";
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      registerUser(user.uid);
+      new QRCode(document.getElementById("qrcode"), user.uid);
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
+</script>
+
+<hr>
+
+<a href="scan.html" style="
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 20px;
+  background: #1b1b1b;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 16px;
+">
+  QRを読み取る
+</a>
+
 
 </body>
 </html>
+
+</body>
+</html>
+
