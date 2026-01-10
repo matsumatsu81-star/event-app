@@ -1,76 +1,27 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <title>My QR</title>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1b1b1b">
-
-  <link rel="manifest" href="manifest.json">
-
-  <!-- QRコード生成ライブラリ -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    #qrcode {
-      background: #ffffff;
-      padding: 20px;
-      display: inline-block;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      margin-top: 10px;
-    }
-    .note {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #555;
-    }
-    .scan-btn {
-      display: inline-block;
-      margin-top: 24px;
-      padding: 14px 24px;
-      background: #1b1b1b;
-      color: white;
-      text-decoration: none;
-      border-radius: 10px;
-      font-size: 16px;
-    }
-  </style>
-</head>
-
-<body>
-
-<h1>マイQRコード</h1>
-
-<p>相手にこのQRを読み取ってもらってください</p>
-
-<div id="qrcode"></div>
-
-<p class="note">
-  ※ スマホのカメラではなく<br>
-  このイベントアプリの「QRを読み取る」からスキャンしてください
-</p>
-
-<a href="scan.html" class="scan-btn">
-  QRを読み取る
-</a>
-
 <script type="module">
   import { auth } from "./firebase.js";
   import { registerUser } from "./app.js";
 
+  let qrGenerated = false;
+
   auth.onAuthStateChanged(user => {
     if (!user) return;
+    if (qrGenerated) return;
 
-    // Firestoreにユーザー登録
+    qrGenerated = true;
+
     registerUser(user.uid);
+
+    const qrDiv = document.getElementById("qrcode");
+    qrDiv.innerHTML = "";
+
+    new QRCode(qrDiv, {
+      text: user.uid,
+      width: 280,
+      height: 280,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+</script>
