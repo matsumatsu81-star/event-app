@@ -10,7 +10,7 @@ import {
 
 /**
  * ユーザー初回登録
- * - すでに存在する場合は何もしない
+ * index.html で必ず1回呼ばれる
  */
 export async function registerUser(uid) {
   const ref = doc(db, "users", uid);
@@ -29,9 +29,9 @@ export async function registerUser(uid) {
 }
 
 /**
- * QR交換処理
- * @param {string} myUid 自分のUID
- * @param {string} targetUid 相手のUID（QRの中身）
+ * QR交換処理（最終版）
+ * - 相手ユーザー存在チェックをしない
+ * - QRが読めれば必ず成立する
  */
 export async function exchange(myUid, targetUid) {
   if (!myUid || !targetUid) {
@@ -39,26 +39,19 @@ export async function exchange(myUid, targetUid) {
   }
 
   if (myUid === targetUid) {
-    throw new Error("同一人物との交換は禁止されています");
+    throw new Error("同一人物とは交換できません");
   }
 
   const myRef = doc(db, "users", myUid);
-  const targetRef = doc(db, "users", targetUid);
-
-  // 相手が存在するか確認（不正QR対策）
-  const targetSnap = await getDoc(targetRef);
-  if (!targetSnap.exists()) {
-    throw new Error("相手ユーザーが存在しません");
-  }
 
   try {
-    // 自分の交換回数を+1
+    // 自分の交換回数を加算
     await updateDoc(myRef, {
       exchangeCount: increment(1),
       lastExchangeAt: serverTimestamp()
     });
 
-    // 全体スコアを+1（存在しなければ作成）
+    // 全体スコアを加算（存在しなければ自動作成）
     await setDoc(
       doc(db, "scores", "total"),
       { count: increment(1) },
