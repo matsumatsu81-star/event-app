@@ -1,0 +1,23 @@
+<script type="module">
+  import { auth } from "./firebase.js";
+  import { exchange } from "./app.js";
+
+  let myUid;
+  let qr;
+
+  auth.onAuthStateChanged(user => {
+    if (!user) return;
+
+    myUid = user.uid;
+
+    qr = new Html5Qrcode("reader");
+    qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (decodedText) => {
+        await exchange(myUid, decodedText);
+        qr.stop();
+      }
+    );
+  });
+</script>
