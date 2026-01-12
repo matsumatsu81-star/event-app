@@ -28,7 +28,9 @@ export async function registerUser(uid) {
 }
 
 /**
- * QR交換（同一相手は1回のみ）
+ * QR交換処理
+ * - 同一相手は1回のみ
+ * - 自分の寮にポイント加算
  */
 export async function exchange(myUid, targetUid) {
   if (!myUid || !targetUid) {
@@ -42,27 +44,36 @@ export async function exchange(myUid, targetUid) {
   const myRef = doc(db, "users", myUid);
   const exchangeRef = doc(db, "users", myUid, "exchanges", targetUid);
 
-  // ① すでに交換済みかチェック
+  // ① 重複交換チェック
   const exchangeSnap = await getDoc(exchangeRef);
   if (exchangeSnap.exists()) {
     throw new Error("この相手とはすでに交換済みです");
   }
 
-  // ② 交換を記録
+  // ② 自分の寮を取得
+  const mySnap = await getDoc(myRef);
+  if (!mySnap.exists()) {
+    throw new Error("ユーザー情報が見つかりません");
+  }
+  const myHouse = mySnap.data().house;
+
+  // ③ 交換記録を保存
   await setDoc(exchangeRef, {
     createdAt: serverTimestamp()
   });
 
-  // ③ 自分の交換回数を加算
+  // ④ 自分の交換回数を加算
   await updateDoc(myRef, {
     exchangeCount: increment(1),
     lastExchangeAt: serverTimestamp()
   });
 
-  // ④ 全体スコア加算
+  // ⑤ 寮別スコアを加算
   await setDoc(
-    doc(db, "scores", "total"),
-    { count: increment(1) },
+    doc(db, "scores", "houses"),
+    {
+      [myHouse]: increment(1)
+    },
     { merge: true }
   );
 }
