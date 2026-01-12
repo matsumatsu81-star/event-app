@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="utf-8">
   <title>Magic Mosaic Event</title>
@@ -22,13 +22,21 @@
     }
 
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
+    #my-house {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    /* ★ QRコードを白背景に */
     #qrcode {
+      background: #ffffff;
+      padding: 12px;
+      width: fit-content;
       margin: 20px auto;
-      width: 200px;
-      height: 200px;
+      border-radius: 8px;
     }
 
     .btn {
@@ -49,25 +57,47 @@
 <body>
 
 <h1>マイQRコード</h1>
+<p id="my-house"></p>
+
 <div id="qrcode"></div>
 
 <a href="scan.html" class="btn">QRを読み取る</a>
 <a href="progress.html" class="btn">寮別進捗を見る</a>
 
 <script type="module">
-  import { auth } from "./firebase.js";
+  import { auth, db } from "./firebase.js";
   import { registerUser } from "./app.js";
+  import { doc, getDoc } from
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  auth.onAuthStateChanged(user => {
+  const HOUSE_NAME = {
+    gryffindor: "グリフィンドール",
+    slytherin: "スリザリン",
+    ravenclaw: "レイブンクロー",
+    hufflepuff: "ハッフルパフ"
+  };
+
+  auth.onAuthStateChanged(async user => {
     if (!user) return;
 
-    registerUser(user.uid);
+    await registerUser(user.uid);
 
-    document.getElementById("qrcode").innerHTML = "";
-    new QRCode(document.getElementById("qrcode"), {
+    // 自分の寮を表示
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const house = snap.data().house;
+      document.getElementById("my-house").textContent =
+        `あなたは「${HOUSE_NAME[house]}」です`;
+    }
+
+    // QRコード生成（★中身は UID）
+    const qrcodeEl = document.getElementById("qrcode");
+    qrcodeEl.innerHTML = "";
+    new QRCode(qrcodeEl, {
       text: user.uid,
-      width: 200,
-      height: 200
+      width: 240,
+      height: 240
     });
   });
 
