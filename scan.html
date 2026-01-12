@@ -6,7 +6,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- QRスキャナ -->
+  <!-- QRスキャナライブラリ -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -51,7 +51,7 @@
 
 <p class="note">
   ※ スマホ標準カメラではなく<br>
-  この画面でQRを読み取ってください
+  この画面の「スキャン開始」を押してください
 </p>
 
 <script type="module">
@@ -62,7 +62,7 @@
   let qr = null;
   let scanning = false;
 
-  // 認証完了を待つ
+  // Firebase 認証完了を待つ
   auth.onAuthStateChanged(user => {
     if (user) {
       myUid = user.uid;
@@ -70,7 +70,7 @@
     }
   });
 
-  // ユーザー操作でカメラ起動（Android / iOS 対応）
+  // ユーザー操作でカメラ起動（iOS / Android 対応）
   document.getElementById("startBtn").addEventListener("click", async () => {
     if (!myUid) {
       alert("ログイン中です。もう一度押してください。");
@@ -106,8 +106,7 @@
             await qr.stop();
             location.href = "index.html";
           } catch (e) {
-            console.error(e);
-            alert("交換に失敗しました。もう一度お試しください。");
+            alert(e.message);
             scanning = false;
           }
         }
