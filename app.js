@@ -9,8 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
- * ユーザー初回登録
- * index.html で必ず1回呼ばれる
+ * 初回ユーザー登録
  */
 export async function registerUser(uid) {
   const ref = doc(db, "users", uid);
@@ -21,7 +20,7 @@ export async function registerUser(uid) {
     const house = houses[Math.floor(Math.random() * houses.length)];
 
     await setDoc(ref, {
-      house: house,
+      house,
       exchangeCount: 0,
       createdAt: serverTimestamp()
     });
@@ -29,9 +28,7 @@ export async function registerUser(uid) {
 }
 
 /**
- * QR交換処理（最終版）
- * - 相手ユーザー存在チェックをしない
- * - QRが読めれば必ず成立する
+ * QR交換（同一相手は1回のみ）
  */
 export async function exchange(myUid, targetUid) {
   if (!myUid || !targetUid) {
@@ -39,27 +36,33 @@ export async function exchange(myUid, targetUid) {
   }
 
   if (myUid === targetUid) {
-    throw new Error("同一人物とは交換できません");
+    throw new Error("自分自身とは交換できません");
   }
 
   const myRef = doc(db, "users", myUid);
+  const exchangeRef = doc(db, "users", myUid, "exchanges", targetUid);
 
-  try {
-    // 自分の交換回数を加算
-    await updateDoc(myRef, {
-      exchangeCount: increment(1),
-      lastExchangeAt: serverTimestamp()
-    });
-
-    // 全体スコアを加算（存在しなければ自動作成）
-    await setDoc(
-      doc(db, "scores", "total"),
-      { count: increment(1) },
-      { merge: true }
-    );
-
-  } catch (e) {
-    console.error("exchange error:", e);
-    throw e;
+  // ① すでに交換済みかチェック
+  const exchangeSnap = await getDoc(exchangeRef);
+  if (exchangeSnap.exists()) {
+    throw new Error("この相手とはすでに交換済みです");
   }
+
+  // ② 交換を記録
+  await setDoc(exchangeRef, {
+    createdAt: serverTimestamp()
+  });
+
+  // ③ 自分の交換回数を加算
+  await updateDoc(myRef, {
+    exchangeCount: increment(1),
+    lastExchangeAt: serverTimestamp()
+  });
+
+  // ④ 全体スコア加算
+  await setDoc(
+    doc(db, "scores", "total"),
+    { count: increment(1) },
+    { merge: true }
+  );
 }
