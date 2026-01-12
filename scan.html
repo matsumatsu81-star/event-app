@@ -6,116 +6,120 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- QRスキャナライブラリ -->
+  <!-- QR読み取りライブラリ -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
       text-align: center;
-      padding: 20px;
-      background: #f5f5f5;
     }
+
     h1 {
-      margin-bottom: 10px;
+      margin: 16px 0;
+      font-size: 20px;
     }
-    #startBtn {
-      padding: 14px 26px;
-      font-size: 18px;
-      border-radius: 10px;
-      border: none;
+
+    #reader {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1; /* ← カメラ映像を最前面に */
+    }
+
+    .msg {
+      margin-top: 12px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 20px;
       background: #1b1b1b;
       color: #fff;
-    }
-    #reader {
-      margin-top: 20px;
-    }
-    .note {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #555;
-      line-height: 1.4;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 15px;
     }
   </style>
 </head>
 
 <body>
 
-<h1>QRを読み取る</h1>
-
-<p>相手の「マイQRコード」を読み取ってください</p>
-
-<button id="startBtn">スキャン開始</button>
+<h1>QRコードを読み取って交換</h1>
 
 <div id="reader"></div>
+<div class="msg" id="status">カメラを起動しています…</div>
 
-<p class="note">
-  ※ スマホ標準カメラではなく<br>
-  この画面の「スキャン開始」を押してください
-</p>
+<a href="index.html" class="btn">トップへ戻る</a>
 
 <script type="module">
   import { auth } from "./firebase.js";
   import { exchange } from "./app.js";
 
   let myUid = null;
-  let qr = null;
-  let scanning = false;
+  let scanning = true;
 
-  // Firebase 認証完了を待つ
+  // 認証確認
   auth.onAuthStateChanged(user => {
-    if (user) {
-      myUid = user.uid;
-      console.log("ログインUID:", myUid);
-    }
-  });
-
-  // ユーザー操作でカメラ起動（iOS / Android 対応）
-  document.getElementById("startBtn").addEventListener("click", async () => {
-    if (!myUid) {
-      alert("ログイン中です。もう一度押してください。");
+    if (!user) {
+      document.getElementById("status").textContent =
+        "認証に失敗しました。トップへ戻ってください。";
       return;
     }
+    myUid = user.uid;
+    startScan();
+  });
 
-    if (qr) return;
+  function startScan() {
+    const html5QrCode = new Html5Qrcode("reader");
 
-    qr = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (!devices || devices.length === 0) {
+        document.getElementById("status").textContent =
+          "カメラが見つかりません";
+        return;
+      }
 
-    try {
-      await qr.start(
+      html5QrCode.start(
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 300, height: 300 }
+          qrbox: { width: 250, height: 250 }
         },
-        async (decodedText) => {
-          if (scanning) return;
+        async decodedText => {
+          if (!scanning) return;
+          scanning = false;
 
-          console.log("QR読み取り成功:", decodedText);
-
-          if (decodedText === myUid) {
-            alert("自分のQRは読み取れません");
-            return;
-          }
-
-          scanning = true;
+          document.getElementById("status").textContent =
+            "交換処理中…";
 
           try {
             await exchange(myUid, decodedText);
-            alert("交換成立！");
-            await qr.stop();
-            location.href = "index.html";
+            document.getElementById("status").textContent =
+              "交換成立しました！";
           } catch (e) {
-            alert(e.message);
-            scanning = false;
+            console.error(e);
+            document.getElementById("status").textContent =
+              "交換に失敗しました。もう一度お試しください。";
+            scanning = true;
           }
+
+          html5QrCode.stop();
         }
       );
-    } catch (e) {
-      console.error("カメラ起動失敗:", e);
-      alert("カメラを起動できませんでした。権限を確認してください。");
-    }
-  });
+    }).catch(err => {
+      console.error(err);
+      document.getElementById("status").textContent =
+        "カメラの起動に失敗しました";
+    });
+  }
 </script>
 
 </body>
