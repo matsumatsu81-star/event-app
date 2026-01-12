@@ -11,7 +11,7 @@
       background: #111;
       color: #fff;
       margin: 0;
-      padding: 20px;
+      padding: 15px;
     }
 
     h1 {
@@ -20,92 +20,103 @@
     }
 
     .house {
-      margin-bottom: 20px;
+      margin-bottom: 25px;
+      text-align: center;
     }
 
-    .label {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 16px;
-    }
-
-    .bar {
-      width: 100%;
-      height: 18px;
-      background: #333;
+    .mosaic {
+      width: 160px;
+      height: 160px;
+      margin: 10px auto;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      background-size: cover;
+      background-position: center;
       border-radius: 10px;
       overflow: hidden;
     }
 
-    .fill {
-      height: 100%;
-      width: 0%;
-      transition: width 0.4s ease;
+    .gryffindor { background-image: url("gryffindor.png"); }
+    .slytherin  { background-image: url("slytherin.png"); }
+    .ravenclaw  { background-image: url("ravenclaw.png"); }
+    .hufflepuff { background-image: url("hufflepuff.png"); }
+
+    .tile {
+      background: rgba(0,0,0,0.85);
     }
 
-    .gryffindor { background: #7f0909; }
-    .slytherin  { background: #0d6217; }
-    .ravenclaw  { background: #222f5b; }
-    .hufflepuff { background: #ecb939; }
+    .score {
+      margin-top: 6px;
+      font-size: 14px;
+    }
   </style>
 </head>
 
 <body>
-  <h1>寮別 モザイク進捗</h1>
 
-  <div class="house">
-    <div class="label">
-      <span>Gryffindor</span><span id="gryffindor-text">0%</span>
-    </div>
-    <div class="bar"><div class="fill gryffindor" id="gryffindor-bar"></div></div>
-  </div>
+<h1>寮別 モザイク進捗</h1>
 
-  <div class="house">
-    <div class="label">
-      <span>Slytherin</span><span id="slytherin-text">0%</span>
-    </div>
-    <div class="bar"><div class="fill slytherin" id="slytherin-bar"></div></div>
-  </div>
+<div class="house">
+  <h3>Gryffindor</h3>
+  <div class="mosaic gryffindor" id="gryffindor"></div>
+  <div class="score" id="gryffindor-score">0%</div>
+</div>
 
-  <div class="house">
-    <div class="label">
-      <span>Ravenclaw</span><span id="ravenclaw-text">0%</span>
-    </div>
-    <div class="bar"><div class="fill ravenclaw" id="ravenclaw-bar"></div></div>
-  </div>
+<div class="house">
+  <h3>Slytherin</h3>
+  <div class="mosaic slytherin" id="slytherin"></div>
+  <div class="score" id="slytherin-score">0%</div>
+</div>
 
-  <div class="house">
-    <div class="label">
-      <span>Hufflepuff</span><span id="hufflepuff-text">0%</span>
-    </div>
-    <div class="bar"><div class="fill hufflepuff" id="hufflepuff-bar"></div></div>
-  </div>
+<div class="house">
+  <h3>Ravenclaw</h3>
+  <div class="mosaic ravenclaw" id="ravenclaw"></div>
+  <div class="score" id="ravenclaw-score">0%</div>
+</div>
 
-  <script type="module">
-    import { db } from "./firebase.js";
-    import { doc, onSnapshot } from
-      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<div class="house">
+  <h3>Hufflepuff</h3>
+  <div class="mosaic hufflepuff" id="hufflepuff"></div>
+  <div class="score" id="hufflepuff-score">0%</div>
+</div>
 
-    const TOTAL = 100;
+<script type="module">
+  import { db } from "./firebase.js";
+  import { doc, onSnapshot } from
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    function update(house, value) {
-      const v = Math.min(value || 0, TOTAL);
-      document.getElementById(house + "-bar").style.width = v + "%";
-      document.getElementById(house + "-text").textContent = v + "%";
+  const TOTAL = 100;
+
+  function render(house, value) {
+    const mosaic = document.getElementById(house);
+    mosaic.innerHTML = "";
+
+    const v = Math.min(value || 0, TOTAL);
+
+    for (let i = 0; i < TOTAL; i++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      if (i < v) tile.style.display = "none";
+      mosaic.appendChild(tile);
     }
 
-    const ref = doc(db, "scores", "houses");
+    document.getElementById(house + "-score").textContent =
+      `完成度 ${v}%`;
+  }
 
-    onSnapshot(ref, snap => {
-      if (!snap.exists()) return;
-      const d = snap.data();
+  const ref = doc(db, "scores", "houses");
 
-      update("gryffindor", d.gryffindor);
-      update("slytherin",  d.slytherin);
-      update("ravenclaw",  d.ravenclaw);
-      update("hufflepuff", d.hufflepuff);
-    });
-  </script>
+  onSnapshot(ref, snap => {
+    if (!snap.exists()) return;
+    const d = snap.data();
+
+    render("gryffindor", d.gryffindor);
+    render("slytherin",  d.slytherin);
+    render("ravenclaw",  d.ravenclaw);
+    render("hufflepuff", d.hufflepuff);
+  });
+</script>
+
 </body>
 </html>
