@@ -1,45 +1,42 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
   <meta charset="utf-8">
-  <title>マイQRコード</title>
+  <title>Magic Mosaic Event</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1b1b1b">
 
   <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1b1b1b">
 
-  <!-- QRコード生成ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: sans-serif;
       text-align: center;
+      background: #111;
+      color: #fff;
+      margin: 0;
       padding: 20px;
-      background: #f5f5f5;
     }
+
     h1 {
-      margin-bottom: 8px;
+      margin-bottom: 20px;
     }
+
     #qrcode {
-      background: #ffffff;
-      padding: 20px;
-      display: inline-block;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      margin-top: 12px;
+      margin: 20px auto;
+      width: 200px;
+      height: 200px;
     }
-    .note {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #555;
-      line-height: 1.4;
-    }
-    .scan-btn {
-      display: inline-block;
-      margin-top: 24px;
-      padding: 14px 26px;
+
+    .btn {
+      display: block;
+      margin: 15px auto;
+      padding: 14px;
+      width: 80%;
+      max-width: 320px;
       background: #1b1b1b;
       color: white;
       text-decoration: none;
@@ -52,52 +49,31 @@
 <body>
 
 <h1>マイQRコード</h1>
-<p>相手にこのQRを読み取ってもらってください</p>
-
 <div id="qrcode"></div>
 
-<p class="note">
-  ※ スマホ標準カメラでは読み取れません<br>
-  このイベントアプリの「QRを読み取る」からスキャンしてください
-</p>
-
-<a href="scan.html" class="scan-btn">
-  QRを読み取る
-</a>
+<a href="scan.html" class="btn">QRを読み取る</a>
+<a href="progress.html" class="btn">寮別進捗を見る</a>
 
 <script type="module">
   import { auth } from "./firebase.js";
   import { registerUser } from "./app.js";
 
-  let qrGenerated = false;
-
   auth.onAuthStateChanged(user => {
     if (!user) return;
-    if (qrGenerated) return;
 
-    qrGenerated = true;
-
-    // Firestore にユーザー登録
     registerUser(user.uid);
 
-    const qrDiv = document.getElementById("qrcode");
-    qrDiv.innerHTML = "";
-
-    // 読み取りやすさ最優先のQR生成
-    new QRCode(qrDiv, {
+    document.getElementById("qrcode").innerHTML = "";
+    new QRCode(document.getElementById("qrcode"), {
       text: user.uid,
-      width: 280,
-      height: 280,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.H
+      width: 200,
+      height: 200
     });
   });
 
-  // 開発中は Service Worker 無効推奨
-  // if ("serviceWorker" in navigator) {
-  //   navigator.serviceWorker.register("sw.js");
-  // }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
 </script>
 
 </body>
