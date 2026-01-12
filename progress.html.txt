@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>寮別進捗</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .house {
+      margin-bottom: 20px;
+    }
+
+    .label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 18px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .gryffindor { background: #7f0909; }
+    .slytherin  { background: #0d6217; }
+    .ravenclaw  { background: #222f5b; }
+    .hufflepuff { background: #ecb939; }
+  </style>
+</head>
+
+<body>
+  <h1>寮別 モザイク進捗</h1>
+
+  <div class="house">
+    <div class="label">
+      <span>Gryffindor</span><span id="gryffindor-text">0%</span>
+    </div>
+    <div class="bar"><div class="fill gryffindor" id="gryffindor-bar"></div></div>
+  </div>
+
+  <div class="house">
+    <div class="label">
+      <span>Slytherin</span><span id="slytherin-text">0%</span>
+    </div>
+    <div class="bar"><div class="fill slytherin" id="slytherin-bar"></div></div>
+  </div>
+
+  <div class="house">
+    <div class="label">
+      <span>Ravenclaw</span><span id="ravenclaw-text">0%</span>
+    </div>
+    <div class="bar"><div class="fill ravenclaw" id="ravenclaw-bar"></div></div>
+  </div>
+
+  <div class="house">
+    <div class="label">
+      <span>Hufflepuff</span><span id="hufflepuff-text">0%</span>
+    </div>
+    <div class="bar"><div class="fill hufflepuff" id="hufflepuff-bar"></div></div>
+  </div>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import { doc, onSnapshot } from
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const TOTAL = 100;
+
+    function update(house, value) {
+      const v = Math.min(value || 0, TOTAL);
+      document.getElementById(house + "-bar").style.width = v + "%";
+      document.getElementById(house + "-text").textContent = v + "%";
+    }
+
+    const ref = doc(db, "scores", "houses");
+
+    onSnapshot(ref, snap => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+
+      update("gryffindor", d.gryffindor);
+      update("slytherin",  d.slytherin);
+      update("ravenclaw",  d.ravenclaw);
+      update("hufflepuff", d.hufflepuff);
+    });
+  </script>
+</body>
+</html>
