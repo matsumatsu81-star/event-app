@@ -8,7 +8,9 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 初回ユーザー登録
+/**
+ * 初回ユーザー登録
+ */
 export async function registerUser(uid) {
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
@@ -19,13 +21,16 @@ export async function registerUser(uid) {
 
     await setDoc(ref, {
       house: house,
-      points: 0,          // ★ 個人ポイント
+      points: 0,          // 個人ポイント
+      exchanged: [],      // ★ 交換済みUIDリスト
       createdAt: serverTimestamp()
     });
   }
 }
 
-// 交換処理
+/**
+ * 交換処理（重複交換防止）
+ */
 export async function exchange(myUid, targetUid) {
   if (!myUid || !targetUid) {
     alert("読み取りに失敗しました");
@@ -38,22 +43,32 @@ export async function exchange(myUid, targetUid) {
   }
 
   const myRef = doc(db, "users", myUid);
-  const mySnap = await getDoc(myRef);
+  const snap = await getDoc(myRef);
 
-  if (!mySnap.exists()) {
+  if (!snap.exists()) {
     alert("ユーザー情報が見つかりません");
     return;
   }
 
-  const myHouse = mySnap.data().house;
+  const data = snap.data();
+  const exchanged = data.exchanged || [];
 
-  // ① 個人ポイント +1
+  // ★ すでに交換済みかチェック
+  if (exchanged.includes(targetUid)) {
+    alert("この相手とはすでに交換済みです");
+    return;
+  }
+
+  // 個人ポイント +1 ＆ 交換履歴追加
   await updateDoc(myRef, {
-    points: increment(1)
+    points: increment(1),
+    exchanged: [...exchanged, targetUid]
   });
 
-  // ② 寮ポイント +1（既存仕様）
+  // 寮ポイント +1
   await updateDoc(doc(db, "scores", "houses"), {
-    [myHouse]: increment(1)
+    [data.house]: increment(1)
   });
+
+  alert("交換成立！");
 }
