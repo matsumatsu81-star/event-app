@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>寮別進捗</title>
+  <title>寮別イラスト進捗</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
@@ -13,6 +13,10 @@
       margin: 0;
       padding: 20px;
       text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
     }
 
     .house {
@@ -39,16 +43,31 @@
     .percent {
       margin-top: 6px;
       font-size: 14px;
-      opacity: 0.8;
+      opacity: 0.85;
+    }
+
+    .back-btn {
+      display: block;
+      margin: 30px auto 0;
+      padding: 14px;
+      width: 80%;
+      max-width: 320px;
+      background: #1b1b1b;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 
 <body>
 
-<h1>寮別モザイク進捗</h1>
+<h1>寮別イラスト進捗</h1>
 
 <div id="houses"></div>
+
+<a href="index.html" class="back-btn">トップへ戻る</a>
 
 <script type="module">
   import { db } from "./firebase.js";
@@ -62,7 +81,7 @@
     hufflepuff: { name: "ハッフルパフ", img: "hufflepuff.png" }
   };
 
-  const MAX_POINTS = 200; // ここをイベント規模に応じて調整
+  const MAX_POINTS = 200;
 
   const container = document.getElementById("houses");
 
@@ -72,7 +91,7 @@
 
     for (const key in HOUSE_INFO) {
       const point = data[key] || 0;
-      const percent = Math.min(point / MAX_POINTS * 100, 100);
+      const percent = Math.min((point / MAX_POINTS) * 100, 100);
 
       const div = document.createElement("div");
       div.className = "house";
