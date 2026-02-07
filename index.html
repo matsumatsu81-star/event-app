@@ -56,6 +56,7 @@
       text-decoration: none;
       border-radius: 10px;
       font-size: 16px;
+      border: none;
     }
   </style>
 </head>
@@ -70,7 +71,41 @@
 <div id="qrcode"></div>
 
 <a href="scan.html" class="btn">QRを読み取る</a>
-<a href="progress.html" class="btn">寮別進捗を見る</a>
+<a href="progress.html" class="btn">寮別イラスト進捗を見る</a>
+<button id="ruleBtn" class="btn">ルール説明</button>
+
+<!-- ルール説明モーダル -->
+<div id="ruleModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  z-index:1000;
+  color:#fff;
+">
+  <div style="
+    background:#111;
+    margin:10vh auto;
+    padding:20px;
+    width:90%;
+    max-width:400px;
+    border-radius:12px;
+    text-align:left;
+  ">
+    <h2 style="text-align:center;">イベントルール</h2>
+
+    <ol style="line-height:1.6;">
+      <li>参加者同士でQRコードを交換してポイントをためよう</li>
+      <li>交換した人数に応じて、寮のイラストが完成していきます</li>
+      <li>イラストの完成度が一番高い寮に景品をプレゼント！</li>
+      <li>さらに、交換回数（個人ポイント）が多い人にも景品があります</li>
+    </ol>
+
+    <button id="closeRule" class="btn" style="width:100%;">
+      閉じる
+    </button>
+  </div>
+</div>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
@@ -89,20 +124,17 @@
 
   auth.onAuthStateChanged(async user => {
     if (!user) {
-      document.getElementById("my-house").textContent =
-        "ログイン中...";
+      document.getElementById("my-house").textContent = "ログイン中...";
       return;
     }
 
-    // 初回ユーザー登録
+    // 初回登録
     await registerUser(user.uid);
 
-    // ユーザー情報をリアルタイム取得
+    // ユーザー情報をリアルタイム監視
     const userRef = doc(db, "users", user.uid);
-
     onSnapshot(userRef, snap => {
       if (!snap.exists()) return;
-
       const data = snap.data();
 
       document.getElementById("my-house").textContent =
@@ -121,6 +153,15 @@
       height: 240
     });
   });
+
+  // ルール説明モーダル制御
+  document.getElementById("ruleBtn").onclick = () => {
+    document.getElementById("ruleModal").style.display = "block";
+  };
+
+  document.getElementById("closeRule").onclick = () => {
+    document.getElementById("ruleModal").style.display = "none";
+  };
 
   // PWA
   if ("serviceWorker" in navigator) {
