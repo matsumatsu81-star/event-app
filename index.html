@@ -1,8 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>Magic Mosaic Event</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1b1b1b">
+
+  <!-- QRコード生成 -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 10px;
+    }
+
+    #my-house {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    #my-points {
+      margin-top: 6px;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    #qrcode {
+      background: #fff;
+      padding: 12px;
+      width: fit-content;
+      margin: 20px auto;
+      border-radius: 10px;
+    }
+
+    .btn {
+      display: block;
+      margin: 14px auto;
+      padding: 14px;
+      width: 80%;
+      max-width: 320px;
+      background: #1b1b1b;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>マイQRコード</h1>
+
+<p id="my-house">読み込み中...</p>
+<p id="my-points"></p>
+
+<div id="qrcode"></div>
+
+<a href="scan.html" class="btn">QRを読み取る</a>
+<a href="progress.html" class="btn">寮別進捗を見る</a>
+
 <script type="module">
   import { auth, db } from "./firebase.js";
   import { registerUser } from "./app.js";
-  import { doc, onSnapshot } from
-    "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import {
+    doc,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const HOUSE_NAME = {
     gryffindor: "グリフィンドール",
@@ -12,14 +88,19 @@
   };
 
   auth.onAuthStateChanged(async user => {
-    if (!user) return;
+    if (!user) {
+      document.getElementById("my-house").textContent =
+        "ログイン中...";
+      return;
+    }
 
+    // 初回ユーザー登録
     await registerUser(user.uid);
 
-    const ref = doc(db, "users", user.uid);
+    // ユーザー情報をリアルタイム取得
+    const userRef = doc(db, "users", user.uid);
 
-    // ★ リアルタイム監視に変更
-    onSnapshot(ref, snap => {
+    onSnapshot(userRef, snap => {
       if (!snap.exists()) return;
 
       const data = snap.data();
@@ -31,12 +112,21 @@
         `あなたの個人ポイント：${data.points ?? 0} pt`;
     });
 
-    const qrcodeEl = document.getElementById("qrcode");
-    qrcodeEl.innerHTML = "";
-    new QRCode(qrcodeEl, {
+    // QRコード生成（1回だけ）
+    const qr = document.getElementById("qrcode");
+    qr.innerHTML = "";
+    new QRCode(qr, {
       text: user.uid,
       width: 240,
       height: 240
     });
   });
+
+  // PWA
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
 </script>
+
+</body>
+</html>
