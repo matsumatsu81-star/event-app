@@ -7,114 +7,87 @@
 
   <style>
     body {
-      font-family: sans-serif;
       background: #111;
       color: #fff;
+      font-family: sans-serif;
       margin: 0;
-      padding: 15px;
-    }
-
-    h1 {
+      padding: 20px;
       text-align: center;
-      margin-bottom: 20px;
     }
 
     .house {
-      margin-bottom: 25px;
-      text-align: center;
+      margin-bottom: 30px;
     }
 
-    .mosaic {
-      width: 160px;
-      height: 160px;
-      margin: 10px auto;
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      grid-template-rows: repeat(10, 1fr);
-      background-size: cover;
-      background-position: center;
-      border-radius: 10px;
+    .house h2 {
+      margin-bottom: 10px;
+    }
+
+    .img-wrap {
+      width: 200px;
+      margin: 0 auto;
       overflow: hidden;
+      border-radius: 10px;
+      background: #000;
     }
 
-    .gryffindor { background-image: url("gryffindor.png"); }
-    .slytherin  { background-image: url("slytherin.png"); }
-    .ravenclaw  { background-image: url("ravenclaw.png"); }
-    .hufflepuff { background-image: url("hufflepuff.png"); }
-
-    .tile {
-      background: rgba(0,0,0,0.85);
+    .img-wrap img {
+      width: 100%;
+      display: block;
     }
 
-    .score {
+    .percent {
       margin-top: 6px;
       font-size: 14px;
+      opacity: 0.8;
     }
   </style>
 </head>
 
 <body>
 
-<h1>寮別 モザイク進捗</h1>
+<h1>寮別モザイク進捗</h1>
 
-<div class="house">
-  <h3>Gryffindor</h3>
-  <div class="mosaic gryffindor" id="gryffindor"></div>
-  <div class="score" id="gryffindor-score">0%</div>
-</div>
-
-<div class="house">
-  <h3>Slytherin</h3>
-  <div class="mosaic slytherin" id="slytherin"></div>
-  <div class="score" id="slytherin-score">0%</div>
-</div>
-
-<div class="house">
-  <h3>Ravenclaw</h3>
-  <div class="mosaic ravenclaw" id="ravenclaw"></div>
-  <div class="score" id="ravenclaw-score">0%</div>
-</div>
-
-<div class="house">
-  <h3>Hufflepuff</h3>
-  <div class="mosaic hufflepuff" id="hufflepuff"></div>
-  <div class="score" id="hufflepuff-score">0%</div>
-</div>
+<div id="houses"></div>
 
 <script type="module">
   import { db } from "./firebase.js";
   import { doc, onSnapshot } from
     "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const TOTAL = 100;
+  const HOUSE_INFO = {
+    gryffindor: { name: "グリフィンドール", img: "gryffindor.png" },
+    slytherin: { name: "スリザリン", img: "slytherin.png" },
+    ravenclaw: { name: "レイブンクロー", img: "ravenclaw.png" },
+    hufflepuff: { name: "ハッフルパフ", img: "hufflepuff.png" }
+  };
 
-  function render(house, value) {
-    const mosaic = document.getElementById(house);
-    mosaic.innerHTML = "";
+  const MAX_POINTS = 200; // ここをイベント規模に応じて調整
 
-    const v = Math.min(value || 0, TOTAL);
+  const container = document.getElementById("houses");
 
-    for (let i = 0; i < TOTAL; i++) {
-      const tile = document.createElement("div");
-      tile.className = "tile";
-      if (i < v) tile.style.display = "none";
-      mosaic.appendChild(tile);
+  onSnapshot(doc(db, "scores", "houses"), snap => {
+    const data = snap.data();
+    container.innerHTML = "";
+
+    for (const key in HOUSE_INFO) {
+      const point = data[key] || 0;
+      const percent = Math.min(point / MAX_POINTS * 100, 100);
+
+      const div = document.createElement("div");
+      div.className = "house";
+
+      div.innerHTML = `
+        <h2>${HOUSE_INFO[key].name}</h2>
+        <div class="img-wrap">
+          <img src="${HOUSE_INFO[key].img}"
+               style="clip-path: inset(${100 - percent}% 0 0 0);">
+        </div>
+        <div class="percent">${Math.floor(percent)}%</div>
+      `;
+
+      container.appendChild(div);
     }
-
-    document.getElementById(house + "-score").textContent =
-      `完成度 ${v}%`;
-  }
-
-  const ref = doc(db, "scores", "houses");
-
-  onSnapshot(ref, snap => {
-    if (!snap.exists()) return;
-    const d = snap.data();
-
-    render("gryffindor", d.gryffindor);
-    render("slytherin",  d.slytherin);
-    render("ravenclaw",  d.ravenclaw);
-    render("hufflepuff", d.hufflepuff);
   });
 </script>
 
