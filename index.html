@@ -27,10 +27,15 @@
 
     #my-house {
       font-size: 18px;
-      margin-bottom: 15px;
+      margin-bottom: 4px;
     }
 
-    /* ★ QRコードを白背景に */
+    #my-points {
+      font-size: 16px;
+      margin-bottom: 14px;
+      opacity: 0.9;
+    }
+
     #qrcode {
       background: #ffffff;
       padding: 12px;
@@ -57,7 +62,9 @@
 <body>
 
 <h1>マイQRコード</h1>
+
 <p id="my-house"></p>
+<p id="my-points"></p>
 
 <div id="qrcode"></div>
 
@@ -82,16 +89,19 @@
 
     await registerUser(user.uid);
 
-    // 自分の寮を表示
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
+
     if (snap.exists()) {
-      const house = snap.data().house;
+      const data = snap.data();
+
       document.getElementById("my-house").textContent =
-        `あなたは「${HOUSE_NAME[house]}」です`;
+        `あなたは「${HOUSE_NAME[data.house]}」です`;
+
+      document.getElementById("my-points").textContent =
+        `あなたの個人ポイント：${data.points || 0} pt`;
     }
 
-    // QRコード生成（★中身は UID）
     const qrcodeEl = document.getElementById("qrcode");
     qrcodeEl.innerHTML = "";
     new QRCode(qrcodeEl, {
