@@ -5,35 +5,59 @@ import {
   getDoc,
   updateDoc,
   increment,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
  * 初回ユーザー登録
- * ・寮をランダム割当
- * ・個人ポイント0
- * ・交換履歴を空配列で作成
+ * 仕様：
+ * ・すでに登録済みなら何もしない
+ * ・全ユーザーの寮人数を数える
+ * ・一番人数が少ない寮に割り当てる（②方式）
  */
 export async function registerUser(uid) {
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
 
-  if (!snap.exists()) {
-    const houses = [
-      "gryffindor",
-      "slytherin",
-      "ravenclaw",
-      "hufflepuff"
-    ];
-    const house = houses[Math.floor(Math.random() * houses.length)];
+  // すでに登録済みなら終了
+  if (snap.exists()) return;
 
-    await setDoc(ref, {
-      house: house,
-      points: 0,        // 個人ポイント（＝交換回数）
-      exchanged: [],    // 交換済みUID一覧
-      createdAt: serverTimestamp()
-    });
-  }
+  const houses = [
+    "gryffindor",
+    "slytherin",
+    "ravenclaw",
+    "hufflepuff"
+  ];
+
+  // 寮ごとの人数カウント
+  const counts = {
+    gryffindor: 0,
+    slytherin: 0,
+    ravenclaw: 0,
+    hufflepuff: 0
+  };
+
+  const allUsers = await getDocs(collection(db, "users"));
+  allUsers.forEach(docSnap => {
+    const house = docSnap.data().house;
+    if (house && counts[house] !== undefined) {
+      counts[house]++;
+    }
+  });
+
+  // 人数が一番少ない寮を選択
+  const house = houses.reduce((a, b) =>
+    counts[a] <= counts[b] ? a : b
+  );
+
+  await setDoc(ref, {
+    house: house,
+    points: 0,        // 個人ポイント（＝交換回数）
+    exchanged: [],    // 交換済みUID一覧
+    createdAt: serverTimestamp()
+  });
 }
 
 /**
@@ -68,13 +92,13 @@ export async function exchange(myUid, targetUid) {
   const exchanged = data.exchanged || [];
   const points = data.points || 0;
 
-  // ★ 交換回数上限（5回まで）
+  // 交換回数上限（5回まで）
   if (points >= 5) {
     alert("交換は5人までです");
     return;
   }
 
-  // ★ 同じ相手との重複交換防止
+  // 同じ相手との重複交換防止
   if (exchanged.includes(targetUid)) {
     alert("この相手とはすでに交換済みです");
     return;
