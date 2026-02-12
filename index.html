@@ -1,193 +1,71 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>Magic Mosaic Event</title>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1b1b1b">
-
-  <!-- QRコード生成 -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-
-    h1 {
-      margin-top: 10px;
-    }
-
-    #my-house {
-      margin-top: 10px;
-      font-size: 18px;
-    }
-
-    #my-points {
-      margin-top: 6px;
-      font-size: 16px;
-      opacity: 0.9;
-    }
-
-    #remain {
-      margin-top: 4px;
-      font-size: 14px;
-      opacity: 0.8;
-    }
-
-    #qrcode {
-      background: #fff;
-      padding: 12px;
-      width: fit-content;
-      margin: 20px auto;
-      border-radius: 10px;
-    }
-
-    .btn {
-      display: block;
-      margin: 14px auto;
-      padding: 14px;
-      width: 80%;
-      max-width: 320px;
-      background: #1b1b1b;
-      color: white;
-      text-decoration: none;
-      border-radius: 10px;
-      font-size: 16px;
-      border: none;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>イベントアプリ</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
 
-<h1>マイQRコード</h1>
+  <h1>ポイント交換イベント</h1>
 
-<p id="my-house">読み込み中...</p>
-<p id="my-points"></p>
-<p id="remain"></p>
+  <!-- あなたの寮 -->
+  <h2 id="houseDisplay">あなたの〇〇寮です</h2>
 
-<div id="qrcode"></div>
+  <!-- 個人ポイント -->
+  <h3>あなたの交換ポイント</h3>
+  <p id="userPoints">0</p>
+  <p id="remainingCount"></p>
 
-<a href="scan.html" class="btn">QRを読み取る</a>
-<a href="progress.html" class="btn">寮別イラスト進捗を見る</a>
-<button id="ruleBtn" class="btn">ルール説明</button>
+  <!-- ボタン -->
+  <button onclick="location.href='scan.html'">
+    QRを読み取る
+  </button>
 
-<!-- ルール説明モーダル -->
-<div id="ruleModal" style="
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.8);
-  z-index:1000;
-  color:#fff;
-">
-  <div style="
-    background:#111;
-    margin:10vh auto;
-    padding:20px;
-    width:90%;
-    max-width:400px;
-    max-height:80vh;
-    overflow-y:auto;
-    border-radius:12px;
-    text-align:left;
-  ">
-    <h2 style="text-align:center;">イベントルール</h2>
+  <button onclick="location.href='progress.html'">
+    寮別イラスト進捗
+  </button>
 
-    <ol style="line-height:1.6;">
-      <li>参加者同士でQRコードを交換してポイントをためよう!</li>
-      <li>「QRを読み取る」から、相手のQRコードを読み込みます</li>
-      <li>1人あたり最大5人まで交換できます</li>
-      <li>交換した人数に応じて、寮のイラストが完成していきます</li>
-      <li>イラストの完成度が一番高い寮に景品をプレゼント！</li>
-      <li>さらに、交換回数（個人ポイント）が多い人にも景品があります</li>
-      <li>15時から景品受け渡しをします。パンフレットに記載の景品引き渡し会場までお越しください。その際に所属の寮と個人ポイントがわかるようにスマホの画面の準備をお願いします。</li>
-    </ol>
+  <button onclick="openRules()">
+    ルール説明
+  </button>
 
-    <button id="closeRule" class="btn" style="width:100%;">
-      とじる
-    </button>
+  <!-- ルールポップ -->
+  <div id="rulesModal" class="modal">
+    <div class="modal-content">
+      <h2>イベントルール</h2>
+
+      <div class="rules-text">
+        <p>① 参加者同士でQRコードを交換してポイントをためます</p>
+        <p>② 交換した人数に応じて寮のイラストが完成していきます</p>
+        <p>③ イラスト完成度が一番高い寮に景品があります</p>
+        <p>④ 交換した回数（個人ポイント）が多い人にも景品があります</p>
+        <p>⑤ 「QRを読み取る」から相手のQRを読み込んでください</p>
+        <p>⑥ 1人あたり最大5人まで交換できます</p>
+      </div>
+
+      <button onclick="closeRules()">とじる</button>
+    </div>
   </div>
-</div>
 
-<script type="module">
-  import { auth, db } from "./firebase.js";
-  import { registerUser } from "./app.js";
-  import {
-    doc,
-    onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <!-- Firebase & App -->
+  <script type="module">
+    import "./firebase.js";
+    import "./app.js";
+  </script>
 
-  const HOUSE_NAME = {
-    gryffindor: "グリフィンドール",
-    slytherin: "スリザリン",
-    ravenclaw: "レイブンクロー",
-    hufflepuff: "ハッフルパフ"
-  };
-
-  const MAX_EXCHANGE = 5;
-
-  auth.onAuthStateChanged(async user => {
-    if (!user) {
-      document.getElementById("my-house").textContent = "ログイン中...";
-      return;
+  <!-- ルール用JS -->
+  <script>
+    function openRules() {
+      document.getElementById("rulesModal").style.display = "block";
     }
 
-    // 初回ユーザー登録
-    await registerUser(user.uid);
-
-    // ユーザー情報をリアルタイム監視
-    const userRef = doc(db, "users", user.uid);
-    onSnapshot(userRef, snap => {
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-      const points = data.points ?? 0;
-      const remain = Math.max(MAX_EXCHANGE - points, 0);
-
-      document.getElementById("my-house").textContent =
-        `あなたは「${HOUSE_NAME[data.house]}」です`;
-
-      document.getElementById("my-points").textContent =
-        `あなたの個人ポイント：${points} pt`;
-
-      document.getElementById("remain").textContent =
-        `あと ${remain} 人と交換できます`;
-    });
-
-    // QRコード生成（自分のUID）
-    const qr = document.getElementById("qrcode");
-    qr.innerHTML = "";
-    new QRCode(qr, {
-      text: user.uid,
-      width: 240,
-      height: 240
-    });
-  });
-
-  // ルール説明モーダル制御
-  document.getElementById("ruleBtn").onclick = () => {
-    document.getElementById("ruleModal").style.display = "block";
-  };
-
-  document.getElementById("closeRule").onclick = () => {
-    document.getElementById("ruleModal").style.display = "none";
-  };
-
-  // PWA
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
-  }
-</script>
+    function closeRules() {
+      document.getElementById("rulesModal").style.display = "none";
+    }
+  </script>
 
 </body>
 </html>
