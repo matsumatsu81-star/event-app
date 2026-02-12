@@ -10,29 +10,25 @@
 
   <script type="module">
     import { addPoint } from "./app.js";
-    import QrScanner from "https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.min.js";
+    import QrScanner from "./qr-scanner.min.js";
+
+    QrScanner.WORKER_PATH = "./qr-scanner-worker.min.js";
 
     const video = document.getElementById("preview");
 
     const scanner = new QrScanner(
       video,
       result => {
-        console.log("読み取り結果:", result.data);
-
-        const house = result.data.toLowerCase();
+        const house = result.toLowerCase();
         addPoint(house);
-
         scanner.stop();
         alert("読み取り完了！");
-      },
-      {
-        returnDetailedScanResult: true
       }
     );
 
     scanner.start().catch(err => {
-      alert("カメラ起動に失敗しました");
       console.error(err);
+      alert("カメラが起動できません");
     });
   </script>
 </body>
