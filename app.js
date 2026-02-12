@@ -1,96 +1,78 @@
 // app.js
-import { auth, db } from "./firebase.js";
+import { db } from "./firebase.js";
 import {
   doc,
-  getDoc,
   setDoc,
+  getDoc,
   updateDoc,
   increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+const MAX_EXCHANGE = 5;
 
-let currentUser = null;
-
-const MAX_EXCHANGES = 5;
-
-// ✅ ログイン完了を待つ
-onAuthStateChanged(auth, async (user) => {
-
-  if (!user) {
-    console.log("ログイン待機中...");
-    return;
-  }
-
-  console.log("ログイン完了:", user.uid);
-
-  currentUser = user;
-
-  await initializeUser(user.uid);
-  generateQRCode(user.uid);
-  updateRemainingCount();
-});
-
-// =========================
-// 初期ユーザー作成
-// =========================
-
-async function initializeUser(uid) {
-
+/* ===============================
+   ユーザー登録
+=============================== */
+export async function registerUser(uid) {
   const userRef = doc(db, "users", uid);
-  const userSnap = await getDoc(userRef);
+  const snap = await getDoc(userRef);
 
-  if (!userSnap.exists()) {
-
+  if (!snap.exists()) {
     const houses = ["gryffindor", "hufflepuff", "ravenclaw", "slytherin"];
-    const randomHouse = houses[Math.floor(Math.random() * houses.length)];
+    const house = houses[Math.floor(Math.random() * houses.length)];
 
     await setDoc(userRef, {
-      house: randomHouse,
+      house: house,
       points: 0,
       exchanges: [],
       createdAt: new Date()
     });
-
-    console.log("新規ユーザー作成:", randomHouse);
   }
 }
 
-// =========================
-// QRコード生成
-// =========================
+/* ===============================
+   交換処理
+=============================== */
+export async function exchangeUsers(myUid, otherUid) {
+  if (myUid === otherUid) {
+    alert("自分とは交換できません");
+    return false;
+  }
 
-function generateQRCode(uid) {
+  const myRef = doc(db, "users", myUid);
+  const otherRef = doc(db, "users", otherUid);
 
-  const qrElement = document.getElementById("qrcode");
+  const mySnap = await getDoc(myRef);
+  const otherSnap = await getDoc(otherRef);
 
-  if (!qrElement) return;
+  if (!mySnap.exists() || !otherSnap.exists()) {
+    alert("ユーザー情報が存在しません");
+    return false;
+  }
 
-  qrElement.innerHTML = "";
+  const myData = mySnap.data();
 
-  new QRCode(qrElement, {
-    text: uid,
-    width: 200,
-    height: 200
+  if (myData.exchanges.includes(otherUid)) {
+    alert("この相手とは交換済みです");
+    return false;
+  }
+
+  if (myData.points >= MAX_EXCHANGE) {
+    alert("これ以上交換できません（上限5人）");
+    return false;
+  }
+
+  // 個人ポイント加算
+  await updateDoc(myRef, {
+    points: increment(1),
+    exchanges: [...myData.exchanges, otherUid]
   });
-}
 
-// =========================
-// 残り回数表示
-// =========================
+  // 寮ポイント加算
+  const houseRef = doc(db, "scores", "houses");
+  await updateDoc(houseRef, {
+    [myData.house]: increment(1)
+  });
 
-async function updateRemainingCount() {
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const userSnap = await getDoc(userRef);
-  const data = userSnap.data();
-
-  const remaining = MAX_EXCHANGES - (data.exchanges?.length || 0);
-
-  const el = document.getElementById("remaining");
-  if (el) {
-    el.innerText = `あと ${remaining} 人交換できます`;
-  }
+  return true;
 }
