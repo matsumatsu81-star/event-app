@@ -1,108 +1,96 @@
-import { db } from "./firebase.js";
+// app.js
+import { auth, db } from "./firebase.js";
 import {
   doc,
-  setDoc,
   getDoc,
+  setDoc,
   updateDoc,
-  increment,
-  serverTimestamp,
-  collection,
-  getDocs
+  increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const MAX_EXCHANGE = 5;
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/**
- * 初回ユーザー登録
- * ・人数が一番少ない寮へ自動割り当て
- */
-export async function registerUser(uid) {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
+let currentUser = null;
 
-  if (snap.exists()) return;
+const MAX_EXCHANGES = 5;
 
-  const houses = [
-    "gryffindor",
-    "slytherin",
-    "ravenclaw",
-    "hufflepuff"
-  ];
+// ✅ ログイン完了を待つ
+onAuthStateChanged(auth, async (user) => {
 
-  const counts = {
-    gryffindor: 0,
-    slytherin: 0,
-    ravenclaw: 0,
-    hufflepuff: 0
-  };
+  if (!user) {
+    console.log("ログイン待機中...");
+    return;
+  }
 
-  const allUsers = await getDocs(collection(db, "users"));
-  allUsers.forEach(docSnap => {
-    const house = docSnap.data().house;
-    if (house && counts[house] !== undefined) {
-      counts[house]++;
-    }
-  });
+  console.log("ログイン完了:", user.uid);
 
-  const house = houses.reduce((a, b) =>
-    counts[a] <= counts[b] ? a : b
-  );
+  currentUser = user;
 
-  await setDoc(ref, {
-    house: house,
-    points: 0,
-    exchanged: [],
-    createdAt: serverTimestamp()
+  await initializeUser(user.uid);
+  generateQRCode(user.uid);
+  updateRemainingCount();
+});
+
+// =========================
+// 初期ユーザー作成
+// =========================
+
+async function initializeUser(uid) {
+
+  const userRef = doc(db, "users", uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+
+    const houses = ["gryffindor", "hufflepuff", "ravenclaw", "slytherin"];
+    const randomHouse = houses[Math.floor(Math.random() * houses.length)];
+
+    await setDoc(userRef, {
+      house: randomHouse,
+      points: 0,
+      exchanges: [],
+      createdAt: new Date()
+    });
+
+    console.log("新規ユーザー作成:", randomHouse);
+  }
+}
+
+// =========================
+// QRコード生成
+// =========================
+
+function generateQRCode(uid) {
+
+  const qrElement = document.getElementById("qrcode");
+
+  if (!qrElement) return;
+
+  qrElement.innerHTML = "";
+
+  new QRCode(qrElement, {
+    text: uid,
+    width: 200,
+    height: 200
   });
 }
 
-/**
- * 交換処理
- */
-export async function exchange(myUid, targetUid) {
+// =========================
+// 残り回数表示
+// =========================
 
-  if (!myUid || !targetUid) {
-    alert("読み取りに失敗しました");
-    return;
+async function updateRemainingCount() {
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const userSnap = await getDoc(userRef);
+  const data = userSnap.data();
+
+  const remaining = MAX_EXCHANGES - (data.exchanges?.length || 0);
+
+  const el = document.getElementById("remaining");
+  if (el) {
+    el.innerText = `あと ${remaining} 人交換できます`;
   }
-
-  if (myUid === targetUid) {
-    alert("同一人物とは交換できません");
-    return;
-  }
-
-  const myRef = doc(db, "users", myUid);
-  const snap = await getDoc(myRef);
-
-  if (!snap.exists()) {
-    alert("ユーザー情報が見つかりません");
-    return;
-  }
-
-  const data = snap.data();
-  const exchanged = data.exchanged || [];
-  const points = data.points || 0;
-
-  if (points >= MAX_EXCHANGE) {
-    alert("交換は5人までです");
-    return;
-  }
-
-  if (exchanged.includes(targetUid)) {
-    alert("この相手とはすでに交換済みです");
-    return;
-  }
-
-  // 個人更新
-  await updateDoc(myRef, {
-    points: increment(1),
-    exchanged: [...exchanged, targetUid]
-  });
-
-  // 🔥 寮ポイント加算（分割前構造）
-  await updateDoc(doc(db, "scores", "houses"), {
-    [data.house]: increment(1)
-  });
-
-  alert("交換成立！");
 }
