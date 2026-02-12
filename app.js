@@ -1,119 +1,157 @@
-import { db } from "./firebase.js";
+// Firebase import
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
+  getFirestore,
   doc,
-  setDoc,
   getDoc,
+  setDoc,
   updateDoc,
   increment,
-  serverTimestamp,
-  collection,
-  getDocs
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/**
- * 初回ユーザー登録
- * 仕様：
- * ・すでに登録済みなら何もしない
- * ・全ユーザーの寮人数を数える
- * ・一番人数が少ない寮に割り当てる（②方式）
- */
-export async function registerUser(uid) {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
+// 🔽 あなたのFirebase設定
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
 
-  // すでに登録済みなら終了
-  if (snap.exists()) return;
+// 初期化
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-  const houses = [
-    "gryffindor",
-    "slytherin",
-    "ravenclaw",
-    "hufflepuff"
-  ];
+const MAX_EXCHANGE = 5;
 
-  // 寮ごとの人数カウント
-  const counts = {
-    gryffindor: 0,
-    slytherin: 0,
-    ravenclaw: 0,
-    hufflepuff: 0
-  };
-
-  const allUsers = await getDocs(collection(db, "users"));
-  allUsers.forEach(docSnap => {
-    const house = docSnap.data().house;
-    if (house && counts[house] !== undefined) {
-      counts[house]++;
-    }
-  });
-
-  // 人数が一番少ない寮を選択
-  const house = houses.reduce((a, b) =>
-    counts[a] <= counts[b] ? a : b
-  );
-
-  await setDoc(ref, {
-    house: house,
-    points: 0,        // 個人ポイント（＝交換回数）
-    exchanged: [],    // 交換済みUID一覧
-    createdAt: serverTimestamp()
-  });
+// 🔹 ランダム寮割り振り
+function assignHouse(uid) {
+  const houses = ["gryffindor", "hufflepuff", "ravenclaw", "slytherin"];
+  return houses[Math.floor(Math.random() * houses.length)];
 }
 
-/**
- * 交換処理
- * 仕様：
- * ・同一人物とは交換不可
- * ・同じ相手とは1回のみ
- * ・1人あたり最大5回まで
- * ・成立時に個人ポイント＆寮ポイント加算
- */
-export async function exchange(myUid, targetUid) {
-  if (!myUid || !targetUid) {
-    alert("読み取りに失敗しました");
-    return;
-  }
+// 🔹 寮名日本語変換
+function houseJP(house) {
+  const map = {
+    gryffindor: "グリフィンドール寮",
+    hufflepuff: "ハッフルパフ寮",
+    ravenclaw: "レイブンクロー寮",
+    slytherin: "スリザリン寮"
+  };
+  return map[house] || house;
+}
 
-  // 自分自身チェック
-  if (myUid === targetUid) {
-    alert("同一人物とは交換できません");
-    return;
-  }
+// 🔹 初回ログイン処理
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
 
-  const myRef = doc(db, "users", myUid);
-  const snap = await getDoc(myRef);
+  const userRef = doc(db, "users", user.uid);
+  const snap = await getDoc(userRef);
 
   if (!snap.exists()) {
-    alert("ユーザー情報が見つかりません");
-    return;
+    const house = assignHouse(user.uid);
+
+    await setDoc(userRef, {
+      house: house,
+      points: 0,
+      exchanges: [],
+      createdAt: new Date()
+    });
   }
 
+  loadUserData(user.uid);
+});
+
+// 🔹 匿名ログイン
+signInAnonymously(auth);
+
+// 🔹 ユーザー情報表示
+async function loadUserData(uid) {
+  const snap = await getDoc(doc(db, "users", uid));
   const data = snap.data();
-  const exchanged = data.exchanged || [];
-  const points = data.points || 0;
 
-  // 交換回数上限（5回まで）
-  if (points >= 5) {
-    alert("交換は5人までです");
-    return;
-  }
+  const remaining = MAX_EXCHANGE - (data.exchanges?.length || 0);
 
-  // 同じ相手との重複交換防止
-  if (exchanged.includes(targetUid)) {
-    alert("この相手とはすでに交換済みです");
-    return;
-  }
+  document.getElementById("myHouse").innerText =
+    "あなたは " + houseJP(data.house) + " です";
 
-  // 個人ポイント加算 & 交換履歴追加
-  await updateDoc(myRef, {
-    points: increment(1),
-    exchanged: [...exchanged, targetUid]
-  });
+  document.getElementById("myPoints").innerText =
+    "あなたのポイント: " + data.points;
 
-  // 寮ポイント加算
-  await updateDoc(doc(db, "scores", "houses"), {
-    [data.house]: increment(1)
-  });
-
-  alert("交換成立！");
+  document.getElementById("remaining").innerText =
+    "あと " + remaining + " 人交換できます";
 }
+
+// 🔹 QR交換処理（この関数をscan成功時に呼ぶ）
+window.processExchange = async function (targetUid) {
+
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+
+  const myRef = doc(db, "users", currentUser.uid);
+  const targetRef = doc(db, "users", targetUid);
+
+  const mySnap = await getDoc(myRef);
+  const targetSnap = await getDoc(targetRef);
+
+  if (!targetSnap.exists()) {
+    alert("相手が見つかりません");
+    return;
+  }
+
+  const myData = mySnap.data();
+  const targetData = targetSnap.data();
+
+  // 🔴 自分自身チェック
+  if (currentUser.uid === targetUid) {
+    alert("自分とは交換できません");
+    return;
+  }
+
+  // 🔴 同一人物交換チェック
+  if (myData.exchanges?.includes(targetUid)) {
+    alert("この相手とは交換済みです");
+    return;
+  }
+
+  // 🔴 回数制限チェック
+  if ((myData.exchanges?.length || 0) >= MAX_EXCHANGE) {
+    alert("交換上限に達しました");
+    return;
+  }
+
+  try {
+    // 自分更新
+    await updateDoc(myRef, {
+      points: increment(1),
+      exchanges: arrayUnion(targetUid)
+    });
+
+    // 相手更新
+    await updateDoc(targetRef, {
+      points: increment(1),
+      exchanges: arrayUnion(currentUser.uid)
+    });
+
+    // 🔥 寮スコア更新（分割構成）
+    await updateDoc(
+      doc(db, "scores/houses", myData.house),
+      { count: increment(1) }
+    );
+
+    alert("交換成立！");
+    loadUserData(currentUser.uid);
+
+  } catch (error) {
+    console.error(error);
+    alert("交換に失敗しました。もう一度お試しください。");
+  }
+};
