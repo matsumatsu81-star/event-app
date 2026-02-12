@@ -1,78 +1,120 @@
 // app.js
+
 import { db } from "./firebase.js";
 import {
   doc,
-  setDoc,
   getDoc,
+  setDoc,
   updateDoc,
-  increment
+  increment,
+  arrayUnion,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const MAX_EXCHANGE = 5;
+/* ===============================
+   設定値
+================================= */
+
+const MAX_EXCHANGES = 5; // 1人あたり最大交換回数
+
+const HOUSES = [
+  "gryffindor",
+  "hufflepuff",
+  "ravenclaw",
+  "slytherin"
+];
 
 /* ===============================
    ユーザー登録
-=============================== */
+================================= */
+
 export async function registerUser(uid) {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
 
   if (!snap.exists()) {
-    const houses = ["gryffindor", "hufflepuff", "ravenclaw", "slytherin"];
-    const house = houses[Math.floor(Math.random() * houses.length)];
+    const randomHouse =
+      HOUSES[Math.floor(Math.random() * HOUSES.length)];
 
     await setDoc(userRef, {
-      house: house,
-      points: 0,
-      exchanges: [],
-      createdAt: new Date()
+      house: randomHouse,
+      points: 0,          // 個人ポイント
+      exchanges: [],      // 交換済みUID
+      createdAt: serverTimestamp()
     });
   }
 }
 
 /* ===============================
    交換処理
-=============================== */
-export async function exchangeUsers(myUid, otherUid) {
-  if (myUid === otherUid) {
-    alert("自分とは交換できません");
+================================= */
+
+export async function exchangePoints(myUid, partnerUid) {
+  if (myUid === partnerUid) {
+    alert("自分自身とは交換できません");
     return false;
   }
 
   const myRef = doc(db, "users", myUid);
-  const otherRef = doc(db, "users", otherUid);
+  const partnerRef = doc(db, "users", partnerUid);
+  const houseRef = doc(db, "scores", "houses");
 
   const mySnap = await getDoc(myRef);
-  const otherSnap = await getDoc(otherRef);
+  const partnerSnap = await getDoc(partnerRef);
 
-  if (!mySnap.exists() || !otherSnap.exists()) {
-    alert("ユーザー情報が存在しません");
+  if (!mySnap.exists() || !partnerSnap.exists()) {
+    alert("ユーザーが見つかりません");
     return false;
   }
 
   const myData = mySnap.data();
 
-  if (myData.exchanges.includes(otherUid)) {
-    alert("この相手とは交換済みです");
+  // ✅ すでに交換済みチェック
+  if (myData.exchanges?.includes(partnerUid)) {
+    alert("この相手とはすでに交換済みです");
     return false;
   }
 
-  if (myData.points >= MAX_EXCHANGE) {
-    alert("これ以上交換できません（上限5人）");
+  // ✅ 上限チェック
+  if (myData.points >= MAX_EXCHANGES) {
+    alert("交換上限（5回）に達しています");
     return false;
   }
 
-  // 個人ポイント加算
-  await updateDoc(myRef, {
-    points: increment(1),
-    exchanges: [...myData.exchanges, otherUid]
-  });
+  const myHouse = myData.house;
 
-  // 寮ポイント加算
-  const houseRef = doc(db, "scores", "houses");
-  await updateDoc(houseRef, {
-    [myData.house]: increment(1)
-  });
+  try {
+    // 🔹 自分のポイント+1
+    await updateDoc(myRef, {
+      points: increment(1),
+      exchanges: arrayUnion(partnerUid)
+    });
 
-  return true;
+    // 🔹 寮ポイント+1
+    await updateDoc(houseRef, {
+      [myHouse]: increment(1)
+    });
+
+    alert("交換成立しました！");
+    return true;
+
+  } catch (error) {
+    console.error(error);
+    alert("交換に失敗しました。もう一度お試しください。");
+    return false;
+  }
+}
+
+/* ===============================
+   残り交換回数取得
+================================= */
+
+export async function getRemainingExchanges(uid) {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+
+  if (!snap.exists()) return 0;
+
+  const points = snap.data().points || 0;
+  return MAX_EXCHANGES - points;
 }
