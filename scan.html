@@ -1,35 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>QRスキャン</title>
+  <meta charset="utf-8">
+  <title>QRを読み取る</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- QR読み取りライブラリ -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 16px 0;
+      font-size: 20px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1; /* ← カメラ映像を最前面に */
+    }
+
+    .msg {
+      margin-top: 12px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 20px;
+      background: #1b1b1b;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+  </style>
 </head>
+
 <body>
-  <h2>QRコードを読み取ってください</h2>
-  <video id="preview" style="width:100%; max-width:400px;"></video>
 
-  <script type="module">
-    import { addPoint } from "./app.js";
-    import QrScanner from "./qr-scanner.min.js";
+<h1>QRコードを読み取って交換</h1>
 
-    QrScanner.WORKER_PATH = "./qr-scanner-worker.min.js";
+<div id="reader"></div>
+<div class="msg" id="status">カメラを起動しています…</div>
 
-    const video = document.getElementById("preview");
+<a href="index.html" class="btn">トップへ戻る</a>
 
-    const scanner = new QrScanner(
-      video,
-      result => {
-        const house = result.toLowerCase();
-        addPoint(house);
-        scanner.stop();
-        alert("読み取り完了！");
+<script type="module">
+  import { auth } from "./firebase.js";
+  import { exchange } from "./app.js";
+
+  let myUid = null;
+  let scanning = true;
+
+  // 認証確認
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      document.getElementById("status").textContent =
+        "認証に失敗しました。トップへ戻ってください。";
+      return;
+    }
+    myUid = user.uid;
+    startScan();
+  });
+
+  function startScan() {
+    const html5QrCode = new Html5Qrcode("reader");
+
+    Html5Qrcode.getCameras().then(devices => {
+      if (!devices || devices.length === 0) {
+        document.getElementById("status").textContent =
+          "カメラが見つかりません";
+        return;
       }
-    );
 
-    scanner.start().catch(err => {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        async decodedText => {
+          if (!scanning) return;
+          scanning = false;
+
+          document.getElementById("status").textContent =
+            "交換処理中…";
+
+          try {
+            await exchange(myUid, decodedText);
+            document.getElementById("status").textContent =
+              "交換成立しました！";
+          } catch (e) {
+            console.error(e);
+            document.getElementById("status").textContent =
+              "交換に失敗しました。もう一度お試しください。";
+            scanning = true;
+          }
+
+          html5QrCode.stop();
+        }
+      );
+    }).catch(err => {
       console.error(err);
-      alert("カメラが起動できません");
+      document.getElementById("status").textContent =
+        "カメラの起動に失敗しました";
     });
-  </script>
+  }
+</script>
+
 </body>
 </html>
