@@ -1,120 +1,119 @@
-// app.js
-
 import { db } from "./firebase.js";
 import {
   doc,
-  getDoc,
   setDoc,
+  getDoc,
   updateDoc,
   increment,
-  arrayUnion,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-/* ===============================
-   設定値
-================================= */
-
-const MAX_EXCHANGES = 5; // 1人あたり最大交換回数
-
-const HOUSES = [
-  "gryffindor",
-  "hufflepuff",
-  "ravenclaw",
-  "slytherin"
-];
-
-/* ===============================
-   ユーザー登録
-================================= */
-
+/**
+ * 初回ユーザー登録
+ * 仕様：
+ * ・すでに登録済みなら何もしない
+ * ・全ユーザーの寮人数を数える
+ * ・一番人数が少ない寮に割り当てる（②方式）
+ */
 export async function registerUser(uid) {
-  const userRef = doc(db, "users", uid);
-  const snap = await getDoc(userRef);
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
 
-  if (!snap.exists()) {
-    const randomHouse =
-      HOUSES[Math.floor(Math.random() * HOUSES.length)];
+  // すでに登録済みなら終了
+  if (snap.exists()) return;
 
-    await setDoc(userRef, {
-      house: randomHouse,
-      points: 0,          // 個人ポイント
-      exchanges: [],      // 交換済みUID
-      createdAt: serverTimestamp()
-    });
-  }
+  const houses = [
+    "gryffindor",
+    "slytherin",
+    "ravenclaw",
+    "hufflepuff"
+  ];
+
+  // 寮ごとの人数カウント
+  const counts = {
+    gryffindor: 0,
+    slytherin: 0,
+    ravenclaw: 0,
+    hufflepuff: 0
+  };
+
+  const allUsers = await getDocs(collection(db, "users"));
+  allUsers.forEach(docSnap => {
+    const house = docSnap.data().house;
+    if (house && counts[house] !== undefined) {
+      counts[house]++;
+    }
+  });
+
+  // 人数が一番少ない寮を選択
+  const house = houses.reduce((a, b) =>
+    counts[a] <= counts[b] ? a : b
+  );
+
+  await setDoc(ref, {
+    house: house,
+    points: 0,        // 個人ポイント（＝交換回数）
+    exchanged: [],    // 交換済みUID一覧
+    createdAt: serverTimestamp()
+  });
 }
 
-/* ===============================
-   交換処理
-================================= */
+/**
+ * 交換処理
+ * 仕様：
+ * ・同一人物とは交換不可
+ * ・同じ相手とは1回のみ
+ * ・1人あたり最大5回まで
+ * ・成立時に個人ポイント＆寮ポイント加算
+ */
+export async function exchange(myUid, targetUid) {
+  if (!myUid || !targetUid) {
+    alert("読み取りに失敗しました");
+    return;
+  }
 
-export async function exchangePoints(myUid, partnerUid) {
-  if (myUid === partnerUid) {
-    alert("自分自身とは交換できません");
-    return false;
+  // 自分自身チェック
+  if (myUid === targetUid) {
+    alert("同一人物とは交換できません");
+    return;
   }
 
   const myRef = doc(db, "users", myUid);
-  const partnerRef = doc(db, "users", partnerUid);
-  const houseRef = doc(db, "scores", "houses");
+  const snap = await getDoc(myRef);
 
-  const mySnap = await getDoc(myRef);
-  const partnerSnap = await getDoc(partnerRef);
-
-  if (!mySnap.exists() || !partnerSnap.exists()) {
-    alert("ユーザーが見つかりません");
-    return false;
+  if (!snap.exists()) {
+    alert("ユーザー情報が見つかりません");
+    return;
   }
 
-  const myData = mySnap.data();
+  const data = snap.data();
+  const exchanged = data.exchanged || [];
+  const points = data.points || 0;
 
-  // ✅ すでに交換済みチェック
-  if (myData.exchanges?.includes(partnerUid)) {
+  // 交換回数上限（5回まで）
+  if (points >= 5) {
+    alert("交換は5人までです");
+    return;
+  }
+
+  // 同じ相手との重複交換防止
+  if (exchanged.includes(targetUid)) {
     alert("この相手とはすでに交換済みです");
-    return false;
+    return;
   }
 
-  // ✅ 上限チェック
-  if (myData.points >= MAX_EXCHANGES) {
-    alert("交換上限（5回）に達しています");
-    return false;
-  }
+  // 個人ポイント加算 & 交換履歴追加
+  await updateDoc(myRef, {
+    points: increment(1),
+    exchanged: [...exchanged, targetUid]
+  });
 
-  const myHouse = myData.house;
+  // 寮ポイント加算
+  await updateDoc(doc(db, "scores", "houses"), {
+    [data.house]: increment(1)
+  });
 
-  try {
-    // 🔹 自分のポイント+1
-    await updateDoc(myRef, {
-      points: increment(1),
-      exchanges: arrayUnion(partnerUid)
-    });
-
-    // 🔹 寮ポイント+1
-    await updateDoc(houseRef, {
-      [myHouse]: increment(1)
-    });
-
-    alert("交換成立しました！");
-    return true;
-
-  } catch (error) {
-    console.error(error);
-    alert("交換に失敗しました。もう一度お試しください。");
-    return false;
-  }
-}
-
-/* ===============================
-   残り交換回数取得
-================================= */
-
-export async function getRemainingExchanges(uid) {
-  const userRef = doc(db, "users", uid);
-  const snap = await getDoc(userRef);
-
-  if (!snap.exists()) return 0;
-
-  const points = snap.data().points || 0;
-  return MAX_EXCHANGES - points;
+  alert("交換成立！");
 }
