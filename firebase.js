@@ -16,4 +16,12 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-signInAnonymously(auth);
+// ★ ログイン結果を確認できるようにする
+signInAnonymously(auth)
+  .then(() => {
+    console.log("匿名ログイン成功");
+  })
+  .catch((error) => {
+    console.error("匿名ログイン失敗:", error);
+    alert("ログインに失敗しました。管理者に連絡してください。");
+  });
