@@ -94,10 +94,15 @@ h1 {
 
 <script>
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "AIzaSyCjvBWgetJj8I_9D5RY1jyz05zSZjD6ZfM",
+  authDomain: "enji-event2025.firebaseapp.com",
+  projectId: "enji-event2025",
+  storageBucket: "enji-event2025.firebasestorage.app",
+  messagingSenderId: "1097616247056",
+  appId: "1:1097616247056:web:a3ff71fb020289df43fd95"
 };
+
+console.log("Project ID:", firebaseConfig.projectId);
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -107,7 +112,13 @@ const MAX_POINTS = 15;
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
 
+  if (!doc.exists) {
+    console.log("houses document not found");
+    return;
+  }
+
   const data = doc.data();
+  console.log("Connected data:", data);
 
   const gryffindor = data.gryffindor || 0;
   const slytherin = data.slytherin || 0;
