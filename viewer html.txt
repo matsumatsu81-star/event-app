@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>寮対抗リアルタイム結果</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 3vw;
+    }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .house {
+      background: #222;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .house img {
+      width: 40%;
+      max-height: 40%;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+
+    .name {
+      font-size: 2vw;
+      margin-bottom: 10px;
+    }
+
+    .percent {
+      font-size: 4vw;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>寮対抗ポイントバトル</h1>
+
+<div class="container">
+  <div class="house" id="gryffindor">
+    <img src="images/gryffindor.png">
+    <div class="name">グリフィンドール</div>
+    <div class="percent" id="g_percent">0%</div>
+  </div>
+
+  <div class="house" id="slytherin">
+    <img src="images/slytherin.png">
+    <div class="name">スリザリン</div>
+    <div class="percent" id="s_percent">0%</div>
+  </div>
+
+  <div class="house" id="ravenclaw">
+    <img src="images/ravenclaw.png">
+    <div class="name">レイブンクロー</div>
+    <div class="percent" id="r_percent">0%</div>
+  </div>
+
+  <div class="house" id="hufflepuff">
+    <img src="images/hufflepuff.png">
+    <div class="name">ハッフルパフ</div>
+    <div class="percent" id="h_percent">0%</div>
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./firebase.js";
+import {
+  doc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const ref = doc(db, "scores", "houses");
+
+onSnapshot(ref, (snap) => {
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+
+  const total =
+    (data.gryffindor || 0) +
+    (data.slytherin || 0) +
+    (data.ravenclaw || 0) +
+    (data.hufflepuff || 0);
+
+  if (total === 0) return;
+
+  const g = Math.round((data.gryffindor / total) * 100);
+  const s = Math.round((data.slytherin / total) * 100);
+  const r = Math.round((data.ravenclaw / total) * 100);
+  const h = Math.round((data.hufflepuff / total) * 100);
+
+  document.getElementById("g_percent").textContent = g + "%";
+  document.getElementById("s_percent").textContent = s + "%";
+  document.getElementById("r_percent").textContent = r + "%";
+  document.getElementById("h_percent").textContent = h + "%";
+});
+</script>
+
+</body>
+</html>
