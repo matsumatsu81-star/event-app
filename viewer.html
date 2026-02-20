@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>寮別イラスト進捗</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
   margin: 0;
@@ -11,30 +12,49 @@ body {
   color: white;
   font-family: sans-serif;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
-h1 { font-size: 48px; margin: 30px 0; }
+
+h1 {
+  font-size: 48px;
+  margin: 30px 0;
+}
+
 .grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  padding: 40px;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 60px;
 }
+
 .card {
-  background: #1e1e1e;
-  border-radius: 20px;
+  width: 260px;
   padding: 20px;
+  border-radius: 20px;
+  background: #1e1e1e;
+  transition: 0.4s;
 }
+
+.card.winner {
+  box-shadow: 0 0 40px gold;
+  transform: scale(1.05);
+}
+
 .image-wrapper {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   margin: auto;
 }
+
 .image-wrapper img {
   position: absolute;
   width: 100%;
-  left: 0;
 }
+
 .fill {
   position: absolute;
   bottom: 0;
@@ -42,18 +62,41 @@ h1 { font-size: 48px; margin: 30px 0; }
   overflow: hidden;
   transition: height 0.8s ease;
 }
+
 .percent {
-  font-size: 60px;
-  margin-top: 15px;
+  font-size: 64px;
+  margin-top: 20px;
 }
 </style>
 </head>
+
 <body>
 
 <h1>寮別イラスト進捗</h1>
 
 <div class="grid">
-  <div class="card">
+
+  <div class="card" id="card-gryffindor">
+    <div class="image-wrapper">
+      <img src="./gryffindor.png" style="filter: grayscale(100%);">
+      <div class="fill" id="fill-gryffindor">
+        <img src="./gryffindor.png">
+      </div>
+    </div>
+    <div class="percent" id="gryffindor">0%</div>
+  </div>
+
+  <div class="card" id="card-slytherin">
+    <div class="image-wrapper">
+      <img src="./slytherin.png" style="filter: grayscale(100%);">
+      <div class="fill" id="fill-slytherin">
+        <img src="./slytherin.png">
+      </div>
+    </div>
+    <div class="percent" id="slytherin">0%</div>
+  </div>
+
+  <div class="card" id="card-ravenclaw">
     <div class="image-wrapper">
       <img src="./ravenclaw.png" style="filter: grayscale(100%);">
       <div class="fill" id="fill-ravenclaw">
@@ -62,6 +105,17 @@ h1 { font-size: 48px; margin: 30px 0; }
     </div>
     <div class="percent" id="ravenclaw">0%</div>
   </div>
+
+  <div class="card" id="card-hufflepuff">
+    <div class="image-wrapper">
+      <img src="./hufflepuff.png" style="filter: grayscale(100%);">
+      <div class="fill" id="fill-hufflepuff">
+        <img src="./hufflepuff.png">
+      </div>
+    </div>
+    <div class="percent" id="hufflepuff">0%</div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -74,17 +128,30 @@ onSnapshot(docRef, (snapshot) => {
   const data = snapshot.data();
   if (!data) return;
 
-  const total =
-    (data.gryffindor || 0) +
-    (data.slytherin || 0) +
-    (data.ravenclaw || 0) +
-    (data.hufflepuff || 0);
+  const values = {
+    gryffindor: data.gryffindor || 0,
+    slytherin: data.slytherin || 0,
+    ravenclaw: data.ravenclaw || 0,
+    hufflepuff: data.hufflepuff || 0
+  };
 
-  function percent(value) {
-    return total === 0 ? 0 : Math.round((value / total) * 100);
+  const total = Object.values(values).reduce((a,b)=>a+b,0);
+
+  let maxPercent = 0;
+
+  for (let key in values) {
+    const p = total === 0 ? 0 : Math.round((values[key]/total)*100);
+    update(key, p);
+    if (p > maxPercent) maxPercent = p;
   }
 
-  update("ravenclaw", percent(data.ravenclaw || 0));
+  // 1位を光らせる
+  for (let key in values) {
+    const el = document.getElementById("card-" + key);
+    const p = total === 0 ? 0 : Math.round((values[key]/total)*100);
+    el.classList.toggle("winner", p === maxPercent && p !== 0);
+  }
+
 });
 
 function update(id, value) {
