@@ -1,127 +1,127 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>寮対抗リアルタイム結果</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>寮別イラスト進捗</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     body {
       margin: 0;
-      background: black;
+      background: #000;
       color: white;
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      text-align: center;
     }
 
     h1 {
-      text-align: center;
-      margin: 20px 0;
-      font-size: 3vw;
+      font-size: 48px;
+      margin: 30px 0;
     }
 
-    .container {
-      flex: 1;
+    .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
-      gap: 10px;
-      padding: 10px;
+      gap: 20px;
+      padding: 20px;
+      height: calc(100vh - 120px);
     }
 
-    .house {
-      background: #222;
+    .card {
+      background: #1e1e1e;
       border-radius: 20px;
-      padding: 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      position: relative;
+      align-items: center;
+      font-size: 28px;
     }
 
-    .house img {
-      width: 40%;
-      max-height: 40%;
-      object-fit: contain;
-      margin-bottom: 10px;
-    }
-
-    .name {
-      font-size: 2vw;
-      margin-bottom: 10px;
+    .card img {
+      width: 150px;
+      margin-bottom: 20px;
     }
 
     .percent {
-      font-size: 4vw;
+      font-size: 72px;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-<h1>寮対抗ポイントバトル</h1>
+<h1>寮別イラスト進捗</h1>
 
-<div class="container">
-  <div class="house" id="gryffindor">
-    <img src="images/gryffindor.png">
-    <div class="name">グリフィンドール</div>
-    <div class="percent" id="g_percent">0%</div>
+<div class="grid">
+  <div class="card">
+    <img src="./gryffindor.png">
+    <div>グリフィンドール</div>
+    <div class="percent" id="gryffindor">0%</div>
   </div>
 
-  <div class="house" id="slytherin">
-    <img src="images/slytherin.png">
-    <div class="name">スリザリン</div>
-    <div class="percent" id="s_percent">0%</div>
+  <div class="card">
+    <img src="./slytherin.png">
+    <div>スリザリン</div>
+    <div class="percent" id="slytherin">0%</div>
   </div>
 
-  <div class="house" id="ravenclaw">
-    <img src="images/ravenclaw.png">
-    <div class="name">レイブンクロー</div>
-    <div class="percent" id="r_percent">0%</div>
+  <div class="card">
+    <img src="./ravenclaw.png">
+    <div>レイブンクロー</div>
+    <div class="percent" id="ravenclaw">0%</div>
   </div>
 
-  <div class="house" id="hufflepuff">
-    <img src="images/hufflepuff.png">
-    <div class="name">ハッフルパフ</div>
-    <div class="percent" id="h_percent">0%</div>
+  <div class="card">
+    <img src="./hufflepuff.png">
+    <div>ハッフルパフ</div>
+    <div class="percent" id="hufflepuff">0%</div>
   </div>
 </div>
 
+<!-- Firebase -->
 <script type="module">
-import { db } from "./firebase.js";
-import {
-  doc,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const ref = doc(db, "scores", "houses");
+  const firebaseConfig = {
+    apiKey: "あなたのAPIキー",
+    authDomain: "あなたのauthDomain",
+    databaseURL: "あなたのdatabaseURL",
+    projectId: "あなたのprojectId",
+    storageBucket: "あなたのstorageBucket",
+    messagingSenderId: "あなたのmessagingSenderId",
+    appId: "あなたのappId"
+  };
 
-onSnapshot(ref, (snap) => {
-  if (!snap.exists()) return;
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-  const data = snap.data();
+  const votesRef = ref(database, "votes");
 
-  const total =
-    (data.gryffindor || 0) +
-    (data.slytherin || 0) +
-    (data.ravenclaw || 0) +
-    (data.hufflepuff || 0);
+  onValue(votesRef, (snapshot) => {
+    const data = snapshot.val() || {
+      gryffindor: 0,
+      slytherin: 0,
+      ravenclaw: 0,
+      hufflepuff: 0
+    };
 
-  if (total === 0) return;
+    const total =
+      data.gryffindor +
+      data.slytherin +
+      data.ravenclaw +
+      data.hufflepuff;
 
-  const g = Math.round((data.gryffindor / total) * 100);
-  const s = Math.round((data.slytherin / total) * 100);
-  const r = Math.round((data.ravenclaw / total) * 100);
-  const h = Math.round((data.hufflepuff / total) * 100);
+    function percent(value) {
+      return total === 0 ? 0 : Math.round((value / total) * 100);
+    }
 
-  document.getElementById("g_percent").textContent = g + "%";
-  document.getElementById("s_percent").textContent = s + "%";
-  document.getElementById("r_percent").textContent = r + "%";
-  document.getElementById("h_percent").textContent = h + "%";
-});
+    document.getElementById("gryffindor").innerText = percent(data.gryffindor) + "%";
+    document.getElementById("slytherin").innerText = percent(data.slytherin) + "%";
+    document.getElementById("ravenclaw").innerText = percent(data.ravenclaw) + "%";
+    document.getElementById("hufflepuff").innerText = percent(data.hufflepuff) + "%";
+  });
 </script>
 
 </body>
