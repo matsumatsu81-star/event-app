@@ -1,36 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>寮別イラスト進捗</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+body {
+  margin: 0;
+  background: #000;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+h1 {
+  font-size: 48px;
+  margin: 30px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 30px;
+  padding: 30px;
+  height: calc(100vh - 140px);
+}
+
+.card {
+  background: #1e1e1e;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  box-shadow: 0 0 30px rgba(255,255,255,0.1);
+}
+
+.card img {
+  width: 180px;
+  margin-bottom: 20px;
+}
+
+.percent {
+  font-size: 80px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>寮別イラスト進捗</h1>
+
+<div class="grid">
+  <div class="card">
+    <img src="./gryffindor.png">
+    <div>グリフィンドール</div>
+    <div class="percent" id="gryffindor">0%</div>
+  </div>
+
+  <div class="card">
+    <img src="./slytherin.png">
+    <div>スリザリン</div>
+    <div class="percent" id="slytherin">0%</div>
+  </div>
+
+  <div class="card">
+    <img src="./ravenclaw.png">
+    <div>レイブンクロー</div>
+    <div class="percent" id="ravenclaw">0%</div>
+  </div>
+
+  <div class="card">
+    <img src="./hufflepuff.png">
+    <div>ハッフルパフ</div>
+    <div class="percent" id="hufflepuff">0%</div>
+  </div>
+</div>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "あなたのAPIキー",
-    authDomain: "あなたのauthDomain",
-    projectId: "あなたのprojectId",
-  };
+/* 🔥 あなたのfirebase.jsと同じ設定をここに貼ってください */
+const firebaseConfig = {
+  apiKey: "あなたのAPIキー",
+  authDomain: "あなたのauthDomain",
+  projectId: "あなたのprojectId",
+  storageBucket: "あなたのstorageBucket",
+  messagingSenderId: "あなたのmessagingSenderId",
+  appId: "あなたのappId"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  const docRef = doc(db, "scores", "houses");
+/* Firestore: scores → houses を監視 */
+const docRef = doc(db, "scores", "houses");
 
-  onSnapshot(docRef, (snapshot) => {
-    const data = snapshot.data();
+onSnapshot(docRef, (snapshot) => {
+  const data = snapshot.data();
+  if (!data) return;
 
-    if (!data) return;
+  const total =
+    (data.gryffindor || 0) +
+    (data.slytherin || 0) +
+    (data.ravenclaw || 0) +
+    (data.hufflepuff || 0);
 
-    const total =
-      data.gryffindor +
-      data.slytherin +
-      data.ravenclaw +
-      data.hufflepuff;
+  function percent(value) {
+    return total === 0 ? 0 : Math.round((value / total) * 100);
+  }
 
-    function percent(value) {
-      return total === 0 ? 0 : Math.round((value / total) * 100);
-    }
-
-    document.getElementById("gryffindor").innerText = percent(data.gryffindor) + "%";
-    document.getElementById("slytherin").innerText = percent(data.slytherin) + "%";
-    document.getElementById("ravenclaw").innerText = percent(data.ravenclaw) + "%";
-    document.getElementById("hufflepuff").innerText = percent(data.hufflepuff) + "%";
-  });
+  document.getElementById("gryffindor").innerText = percent(data.gryffindor || 0) + "%";
+  document.getElementById("slytherin").innerText = percent(data.slytherin || 0) + "%";
+  document.getElementById("ravenclaw").innerText = percent(data.ravenclaw || 0) + "%";
+  document.getElementById("hufflepuff").innerText = percent(data.hufflepuff || 0) + "%";
+});
 </script>
+
+</body>
+</html>
