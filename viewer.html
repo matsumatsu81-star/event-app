@@ -60,6 +60,7 @@ h1 {
   bottom: 0;
   width: 100%;
   overflow: hidden;
+  height: 0%;
   transition: height 0.8s ease;
 }
 
@@ -122,6 +123,8 @@ h1 {
 import { db } from "./firebase.js";
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+const GOAL = 15; // ★ 15ポイントで100%
+
 const docRef = doc(db, "scores", "houses");
 
 onSnapshot(docRef, (snapshot) => {
@@ -135,23 +138,20 @@ onSnapshot(docRef, (snapshot) => {
     hufflepuff: data.hufflepuff || 0
   };
 
-  const total = Object.values(values).reduce((a,b)=>a+b,0);
-
   let maxPercent = 0;
 
   for (let key in values) {
-    const p = total === 0 ? 0 : Math.round((values[key]/total)*100);
-    update(key, p);
-    if (p > maxPercent) maxPercent = p;
+    const percent = Math.min(100, Math.round((values[key] / GOAL) * 100));
+    update(key, percent);
+    if (percent > maxPercent) maxPercent = percent;
   }
 
-  // 1位を光らせる
   for (let key in values) {
-    const el = document.getElementById("card-" + key);
-    const p = total === 0 ? 0 : Math.round((values[key]/total)*100);
-    el.classList.toggle("winner", p === maxPercent && p !== 0);
+    const percent = Math.min(100, Math.round((values[key] / GOAL) * 100));
+    document
+      .getElementById("card-" + key)
+      .classList.toggle("winner", percent === maxPercent && percent !== 0);
   }
-
 });
 
 function update(id, value) {
