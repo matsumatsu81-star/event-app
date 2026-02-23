@@ -111,7 +111,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-const MAX_POINTS = 15;
+const MAX_POINTS = 500;
 
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
@@ -151,3 +151,4 @@ function updateHouse(id, point) {
 
 </body>
 </html>
+
