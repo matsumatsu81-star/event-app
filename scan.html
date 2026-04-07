@@ -16,6 +16,7 @@
       color: #fff;
       font-family: sans-serif;
       text-align: center;
+      transition: background 0.2s ease; /* ★ 光る用 */
     }
 
     h1 {
@@ -76,6 +77,13 @@
     startScan();
   });
 
+  function flashEffect() {
+    document.body.style.background = "#064"; // ★ 緑に光る
+    setTimeout(() => {
+      document.body.style.background = "#000";
+    }, 200);
+  }
+
   function startScan() {
     const html5QrCode = new Html5Qrcode("reader");
 
@@ -105,20 +113,32 @@
             if (result) {
               document.getElementById("status").textContent =
                 "交換成立しました！";
+
+              // ★ 光る（全端末）
+              flashEffect();
+
+              // ★ バイブ（Androidなど対応端末のみ）
+              if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+              }
+
+              // ★ 成功時のみ停止
+              html5QrCode.stop();
+
             } else {
               document.getElementById("status").textContent =
                 "交換できませんでした";
-              scanning = true; // ★ 再スキャン可能
+
+              scanning = true;
             }
 
           } catch (e) {
             console.error(e);
             document.getElementById("status").textContent =
               "エラーが発生しました";
+
             scanning = true;
           }
-
-          html5QrCode.stop();
         }
       );
     }).catch(err => {
