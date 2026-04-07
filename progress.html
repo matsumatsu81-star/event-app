@@ -15,9 +15,17 @@
       text-align: center;
     }
 
-    h1 { margin-bottom: 20px; }
+    h1 {
+      margin-bottom: 20px;
+    }
 
-    .house { margin-bottom: 30px; }
+    .house {
+      margin-bottom: 30px;
+    }
+
+    .house h2 {
+      margin-bottom: 10px;
+    }
 
     .img-wrap {
       width: 200px;
@@ -30,12 +38,25 @@
     .img-wrap img {
       width: 100%;
       display: block;
-      transition: clip-path 0.5s ease;
     }
 
     .percent {
       margin-top: 6px;
       font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .back-btn {
+      display: block;
+      margin: 30px auto 0;
+      padding: 14px;
+      width: 80%;
+      max-width: 320px;
+      background: #1b1b1b;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -43,87 +64,52 @@
 <body>
 
 <h1>寮別イラスト進捗</h1>
+
 <div id="houses"></div>
 
+<a href="index.html" class="back-btn">トップへ戻る</a>
+
 <script type="module">
-import { db } from "./firebase.js";
-import { doc, onSnapshot }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { db } from "./firebase.js";
+  import { doc, onSnapshot } from
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const HOUSE_INFO = {
-  gryffindor: { name: "グリフィンドール", img: "gryffindor.png" },
-  slytherin: { name: "スリザリン", img: "slytherin.png" },
-  ravenclaw: { name: "レイブンクロー", img: "ravenclaw.png" },
-  hufflepuff: { name: "ハッフルパフ", img: "hufflepuff.png" }
-};
+  const HOUSE_INFO = {
+    gryffindor: { name: "グリフィンドール", img: "gryffindor.png" },
+    slytherin: { name: "スリザリン", img: "slytherin.png" },
+    ravenclaw: { name: "レイブンクロー", img: "ravenclaw.png" },
+    hufflepuff: { name: "ハッフルパフ", img: "hufflepuff.png" }
+  };
 
-const MAX_POINTS = 15;
-const container = document.getElementById("houses");
+  const MAX_POINTS = 15;
 
-function isClosed() {
-  const now = new Date();
-  const d = new Date();
-  d.setHours(14,30,0,0);
-  return now >= d;
-}
+  const container = document.getElementById("houses");
 
-let fixedData = null;
-let alreadyClosed = false;
+  onSnapshot(doc(db, "scores", "houses"), snap => {
+    const data = snap.data();
+    container.innerHTML = "";
 
-// ★ リロード対策
-const saved = localStorage.getItem("finalData");
-if (saved) {
-  fixedData = JSON.parse(saved);
-  alreadyClosed = true;
-}
+    for (const key in HOUSE_INFO) {
+      const point = data[key] || 0;
+      const percent = Math.min((point / MAX_POINTS) * 100, 100);
 
-onSnapshot(doc(db, "scores", "houses"), snap => {
-  const data = snap.data();
-  if (!data) return;
+      const div = document.createElement("div");
+      div.className = "house";
 
-  const nowClosed = isClosed();
+      div.innerHTML = `
+        <h2>${HOUSE_INFO[key].name}</h2>
+        <div class="img-wrap">
+          <img src="${HOUSE_INFO[key].img}"
+               style="clip-path: inset(${100 - percent}% 0 0 0);">
+        </div>
+        <div class="percent">${Math.floor(percent)}%</div>
+      `;
 
-  // ★ 14:30瞬間固定
-  if (nowClosed && !alreadyClosed) {
-    fixedData = data;
-    localStorage.setItem("finalData", JSON.stringify(data));
-    alreadyClosed = true;
-    render(fixedData);
-    return;
-  }
-
-  // ★ 固定表示
-  if (nowClosed) {
-    render(fixedData);
-    return;
-  }
-
-  render(data);
-});
-
-function render(data) {
-  container.innerHTML = "";
-
-  for (const key in HOUSE_INFO) {
-    const p = data[key] || 0;
-    const percent = Math.min((p / MAX_POINTS) * 100, 100);
-
-    const div = document.createElement("div");
-    div.className = "house";
-
-    div.innerHTML = `
-      <h2>${HOUSE_INFO[key].name}</h2>
-      <div class="img-wrap">
-        <img src="${HOUSE_INFO[key].img}"
-             style="clip-path: inset(${100 - percent}% 0 0 0);">
-      </div>
-      <div class="percent">${percent.toFixed(1)}%</div>
-    `;
-
-    container.appendChild(div);
-  }
-}
+      container.appendChild(div);
+    }
+  });
 </script>
 
 </body>
 </html>
+
