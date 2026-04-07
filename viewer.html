@@ -113,10 +113,32 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 500;
 
+// ★ 締切判定（当日14:30）
+function isClosed() {
+  const now = new Date();
+
+  const deadline = new Date();
+  deadline.setHours(14);
+  deadline.setMinutes(30);
+  deadline.setSeconds(0);
+  deadline.setMilliseconds(0);
+
+  return now >= deadline;
+}
+
+// ★ 一度止めたら更新しない
+let stopped = false;
+
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
 
   if (!doc.exists) return;
+
+  // ★ 締切後は更新しない
+  if (isClosed()) {
+    if (stopped) return;
+    stopped = true;
+  }
 
   const data = doc.data();
 
@@ -143,7 +165,6 @@ function updateHouse(id, point) {
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
   document.getElementById(id + "Percent").innerText = Math.floor(percent) + "%";
 
-  // 上から隠す（progress.htmlと同じ）
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
 }
@@ -151,4 +172,3 @@ function updateHouse(id, point) {
 
 </body>
 </html>
-
