@@ -59,12 +59,35 @@ h1 {
 .card.active {
   box-shadow: 0 0 60px 20px gold;
 }
+
+/* ★ リセットボタン */
+.reset-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  font-size: 14px;
+  background: #222;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.reset-btn:hover {
+  opacity: 1;
+  background: #444;
+}
 </style>
 </head>
 
 <body>
 
 <h1>寮別イラスト進捗</h1>
+
+<!-- ★ リセットボタン -->
+<button class="reset-btn" onclick="resetData()">リセット</button>
 
 <div class="container">
 
@@ -113,7 +136,15 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 500;
 
-/* ★ 締切判定（14:30） */
+/* ★ リセット関数 */
+function resetData() {
+  if (confirm("表示をリセットしますか？")) {
+    localStorage.removeItem("finalData");
+    location.reload();
+  }
+}
+
+/* ★ 締切 */
 function isClosed() {
   const now = new Date();
   const deadline = new Date();
@@ -121,10 +152,8 @@ function isClosed() {
   return now >= deadline;
 }
 
-/* ★ ローカル保存データ */
 let fixedData = null;
 
-/* ★ 初回ロード時：締切後なら固定データ表示 */
 if (isClosed()) {
   const saved = localStorage.getItem("finalData");
   if (saved) {
@@ -133,7 +162,6 @@ if (isClosed()) {
   }
 }
 
-/* ★ Firestore監視 */
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
 
@@ -141,7 +169,6 @@ db.collection("scores").doc("houses")
 
   const data = doc.data();
 
-  // 締切後は固定
   if (isClosed()) {
     if (!fixedData) {
       localStorage.setItem("finalData", JSON.stringify(data));
@@ -153,7 +180,6 @@ db.collection("scores").doc("houses")
   render(data);
 });
 
-/* ★ 描画 */
 function render(data) {
   const gryffindor = data.gryffindor || 0;
   const slytherin = data.slytherin || 0;
