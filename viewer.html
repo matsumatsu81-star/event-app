@@ -60,7 +60,6 @@ h1 {
   box-shadow: 0 0 60px 20px gold;
 }
 
-/* ★ リセットボタン */
 .reset-btn {
   position: fixed;
   top: 20px;
@@ -86,7 +85,6 @@ h1 {
 
 <h1>寮別イラスト進捗</h1>
 
-<!-- ★ リセットボタン -->
 <button class="reset-btn" onclick="resetData()">リセット</button>
 
 <div class="container">
@@ -136,7 +134,6 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 15;
 
-/* ★ リセット関数 */
 function resetData() {
   if (confirm("表示をリセットしますか？")) {
     localStorage.removeItem("finalData");
@@ -144,7 +141,6 @@ function resetData() {
   }
 }
 
-/* ★ 締切 */
 function isClosed() {
   const now = new Date();
   const deadline = new Date();
@@ -204,7 +200,7 @@ function updateHouse(id, point) {
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
 
   document.getElementById(id + "Percent").innerText =
-    Math.floor(percent) + "%";
+    percent.toFixed(1) + "%";
 
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
