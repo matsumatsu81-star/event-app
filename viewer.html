@@ -113,35 +113,48 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 500;
 
-// ★ 締切判定（当日14:30）
+/* ★ 締切判定（14:30） */
 function isClosed() {
   const now = new Date();
-
   const deadline = new Date();
-  deadline.setHours(14);
-  deadline.setMinutes(30);
-  deadline.setSeconds(0);
-  deadline.setMilliseconds(0);
-
+  deadline.setHours(14, 30, 0, 0);
   return now >= deadline;
 }
 
-// ★ 一度止めたら更新しない
-let stopped = false;
+/* ★ ローカル保存データ */
+let fixedData = null;
 
+/* ★ 初回ロード時：締切後なら固定データ表示 */
+if (isClosed()) {
+  const saved = localStorage.getItem("finalData");
+  if (saved) {
+    fixedData = JSON.parse(saved);
+    render(fixedData);
+  }
+}
+
+/* ★ Firestore監視 */
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
 
   if (!doc.exists) return;
 
-  // ★ 締切後は更新しない
-  if (isClosed()) {
-    if (stopped) return;
-    stopped = true;
-  }
-
   const data = doc.data();
 
+  // 締切後は固定
+  if (isClosed()) {
+    if (!fixedData) {
+      localStorage.setItem("finalData", JSON.stringify(data));
+      fixedData = data;
+    }
+    return;
+  }
+
+  render(data);
+});
+
+/* ★ 描画 */
+function render(data) {
   const gryffindor = data.gryffindor || 0;
   const slytherin = data.slytherin || 0;
   const ravenclaw = data.ravenclaw || 0;
@@ -153,17 +166,19 @@ db.collection("scores").doc("houses")
   updateHouse("hufflepuff", hufflepuff);
 
   const max = Math.max(gryffindor, slytherin, ravenclaw, hufflepuff);
-  document.querySelectorAll(".card").forEach(card => card.classList.remove("active"));
+  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
 
   if (gryffindor === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
   if (slytherin === max && max !== 0) document.getElementById("slytherin").classList.add("active");
   if (ravenclaw === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
   if (hufflepuff === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
-});
+}
 
 function updateHouse(id, point) {
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
-  document.getElementById(id + "Percent").innerText = Math.floor(percent) + "%";
+
+  document.getElementById(id + "Percent").innerText =
+    Math.floor(percent) + "%";
 
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
