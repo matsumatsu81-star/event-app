@@ -28,7 +28,7 @@
       max-width: 360px;
       margin: 0 auto;
       position: relative;
-      z-index: 1; /* ← カメラ映像を最前面に */
+      z-index: 1;
     }
 
     .msg {
@@ -66,7 +66,6 @@
   let myUid = null;
   let scanning = true;
 
-  // 認証確認
   auth.onAuthStateChanged(user => {
     if (!user) {
       document.getElementById("status").textContent =
@@ -101,13 +100,21 @@
             "交換処理中…";
 
           try {
-            await exchange(myUid, decodedText);
-            document.getElementById("status").textContent =
-              "交換成立しました！";
+            const result = await exchange(myUid, decodedText);
+
+            if (result) {
+              document.getElementById("status").textContent =
+                "交換成立しました！";
+            } else {
+              document.getElementById("status").textContent =
+                "交換できませんでした";
+              scanning = true; // ★ 再スキャン可能
+            }
+
           } catch (e) {
             console.error(e);
             document.getElementById("status").textContent =
-              "交換に失敗しました。もう一度お試しください。";
+              "エラーが発生しました";
             scanning = true;
           }
 
