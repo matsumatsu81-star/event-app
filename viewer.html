@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>寮別イラスト進捗</title>
+<title>寮対抗 結果発表</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -11,14 +11,15 @@
 body {
   margin: 0;
   background: #000;
-  font-family: sans-serif;
   color: white;
+  font-family: sans-serif;
   text-align: center;
+  overflow: hidden;
 }
 
-h1 {
-  margin-top: 40px;
-  font-size: 48px;
+/* 通常表示 */
+#main {
+  transition: opacity 1s;
 }
 
 .container {
@@ -56,159 +57,154 @@ h1 {
   font-weight: bold;
 }
 
-.card.active {
-  box-shadow: 0 0 60px 20px gold;
-}
-
-/* ★ リセットボタン */
-.reset-btn {
+/* 結果発表画面 */
+#resultScreen {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 10px 16px;
-  font-size: 14px;
-  background: #222;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 8px;
-  cursor: pointer;
-  opacity: 0.7;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 }
 
-.reset-btn:hover {
-  opacity: 1;
-  background: #444;
+#winnerImg {
+  width: 400px;
+  animation: zoom 1s ease;
+}
+
+#winnerName {
+  font-size: 60px;
+  margin-top: 20px;
+  color: gold;
+  animation: glow 1.5s infinite alternate;
+}
+
+@keyframes zoom {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes glow {
+  from { text-shadow: 0 0 10px gold; }
+  to { text-shadow: 0 0 30px gold; }
+}
+
+/* 紙吹雪 */
+.confetti {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: red;
+  top: -10px;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
 }
 </style>
 </head>
 
 <body>
 
-<h1>寮別イラスト進捗</h1>
+<div id="main">
+  <h1>寮対抗 イラスト完成度</h1>
 
-<!-- ★ リセットボタン -->
-<button class="reset-btn" onclick="resetData()">リセット</button>
-
-<div class="container">
-
-  <div class="card" id="gryffindor">
-    <div class="img-wrap">
-      <img id="gryffindorImg" src="gryffindor.png">
-    </div>
-    <div class="percent" id="gryffindorPercent">0%</div>
+  <div class="container">
+    <div class="card"><img id="gryffindorImg" src="gryffindor.png"><div id="gryffindorPercent"></div></div>
+    <div class="card"><img id="slytherinImg" src="slytherin.png"><div id="slytherinPercent"></div></div>
+    <div class="card"><img id="ravenclawImg" src="ravenclaw.png"><div id="ravenclawPercent"></div></div>
+    <div class="card"><img id="hufflepuffImg" src="hufflepuff.png"><div id="hufflepuffPercent"></div></div>
   </div>
+</div>
 
-  <div class="card" id="slytherin">
-    <div class="img-wrap">
-      <img id="slytherinImg" src="slytherin.png">
-    </div>
-    <div class="percent" id="slytherinPercent">0%</div>
-  </div>
-
-  <div class="card" id="ravenclaw">
-    <div class="img-wrap">
-      <img id="ravenclawImg" src="ravenclaw.png">
-    </div>
-    <div class="percent" id="ravenclawPercent">0%</div>
-  </div>
-
-  <div class="card" id="hufflepuff">
-    <div class="img-wrap">
-      <img id="hufflepuffImg" src="hufflepuff.png">
-    </div>
-    <div class="percent" id="hufflepuffPercent">0%</div>
-  </div>
-
+<!-- 結果発表 -->
+<div id="resultScreen">
+  <img id="winnerImg">
+  <div id="winnerName"></div>
 </div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyCjvBWgetJj8I_9D5RY1jyz05zSZjD6ZfM",
+  apiKey: "AIzaSy...",
   authDomain: "enji-event2025.firebaseapp.com",
-  projectId: "enji-event2025",
-  storageBucket: "enji-event2025.firebasestorage.app",
-  messagingSenderId: "1097616247056",
-  appId: "1:1097616247056:web:a3ff71fb020289df43fd95"
+  projectId: "enji-event2025"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-const MAX_POINTS = 15;
+const MAX_POINTS = 500;
 
-/* ★ リセット関数 */
-function resetData() {
-  if (confirm("表示をリセットしますか？")) {
-    localStorage.removeItem("finalData");
-    location.reload();
-  }
-}
+const HOUSE_INFO = {
+  gryffindor: { name: "グリフィンドール", img: "gryffindor.png" },
+  slytherin: { name: "スリザリン", img: "slytherin.png" },
+  ravenclaw: { name: "レイブンクロー", img: "ravenclaw.png" },
+  hufflepuff: { name: "ハッフルパフ", img: "hufflepuff.png" }
+};
 
-/* ★ 締切 */
-function isClosed() {
+let finished = false;
+
+function isAfter1430() {
   const now = new Date();
-  const deadline = new Date();
-  deadline.setHours(14, 30, 0, 0);
-  return now >= deadline;
+  return now.getHours() > 14 || (now.getHours() === 14 && now.getMinutes() >= 30);
 }
 
-let fixedData = null;
+function showResult(winner) {
+  document.getElementById("main").style.opacity = 0;
 
-if (isClosed()) {
-  const saved = localStorage.getItem("finalData");
-  if (saved) {
-    fixedData = JSON.parse(saved);
-    render(fixedData);
+  setTimeout(() => {
+    document.getElementById("main").style.display = "none";
+    document.getElementById("resultScreen").style.display = "flex";
+
+    document.getElementById("winnerImg").src = HOUSE_INFO[winner].img;
+    document.getElementById("winnerName").textContent = "🏆 優勝：" + HOUSE_INFO[winner].name;
+
+    launchConfetti();
+  }, 1000);
+}
+
+function launchConfetti() {
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.animationDuration = (2 + Math.random() * 3) + "s";
+    c.style.background = ["red","yellow","blue","green"][Math.floor(Math.random()*4)];
+    document.body.appendChild(c);
   }
 }
 
 db.collection("scores").doc("houses")
-.onSnapshot((doc) => {
-
-  if (!doc.exists) return;
+.onSnapshot(doc => {
 
   const data = doc.data();
 
-  if (isClosed()) {
-    if (!fixedData) {
-      localStorage.setItem("finalData", JSON.stringify(data));
-      fixedData = data;
+  let max = 0;
+  let winner = null;
+
+  for (const key in HOUSE_INFO) {
+    const p = data[key] || 0;
+    if (p > max) {
+      max = p;
+      winner = key;
     }
-    return;
+
+    const percent = Math.min((p / MAX_POINTS) * 100, 100);
+    document.getElementById(key + "Percent").innerText = Math.floor(percent) + "%";
   }
 
-  render(data);
+  if (isAfter1430() && !finished && winner) {
+    finished = true;
+    showResult(winner);
+  }
 });
-
-function render(data) {
-  const gryffindor = data.gryffindor || 0;
-  const slytherin = data.slytherin || 0;
-  const ravenclaw = data.ravenclaw || 0;
-  const hufflepuff = data.hufflepuff || 0;
-
-  updateHouse("gryffindor", gryffindor);
-  updateHouse("slytherin", slytherin);
-  updateHouse("ravenclaw", ravenclaw);
-  updateHouse("hufflepuff", hufflepuff);
-
-  const max = Math.max(gryffindor, slytherin, ravenclaw, hufflepuff);
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
-
-  if (gryffindor === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
-  if (slytherin === max && max !== 0) document.getElementById("slytherin").classList.add("active");
-  if (ravenclaw === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
-  if (hufflepuff === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
-}
-
-function updateHouse(id, point) {
-  const percent = Math.min((point / MAX_POINTS) * 100, 100);
-
-  document.getElementById(id + "Percent").innerText =
-    Math.floor(percent) + "%";
-
-  document.getElementById(id + "Img")
-    .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
-}
 </script>
 
 </body>
