@@ -85,7 +85,6 @@
   const MAX_POINTS = 15;
   const container = document.getElementById("houses");
 
-  /* ★ 締切 */
   function isClosed() {
     const now = new Date();
     const deadline = new Date();
@@ -134,7 +133,7 @@
           <img src="${HOUSE_INFO[key].img}"
                style="clip-path: inset(${100 - percent}% 0 0 0);">
         </div>
-        <div class="percent">${Math.floor(percent)}%</div>
+        <div class="percent">${percent.toFixed(1)}%</div>
       `;
 
       container.appendChild(div);
@@ -145,7 +144,7 @@
      ★ 管理者専用リセット（隠し＋パスコード）
   ========================= */
 
-  const ADMIN_PASS = "1234"; // ←ここ変更してください
+  const ADMIN_PASS = "1234";
 
   let tapCount = 0;
   let lastTapTime = 0;
