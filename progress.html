@@ -64,7 +64,7 @@
 
 <body>
 
-<h1>寮別イラスト進捗</h1>
+<h1 id="title">寮別イラスト進捗</h1>
 
 <div id="houses"></div>
 
@@ -85,7 +85,7 @@
   const MAX_POINTS = 15;
   const container = document.getElementById("houses");
 
-  /* ★ 締切判定 */
+  /* ★ 締切 */
   function isClosed() {
     const now = new Date();
     const deadline = new Date();
@@ -93,10 +93,8 @@
     return now >= deadline;
   }
 
-  /* ★ 固定データ */
   let fixedData = null;
 
-  // 初回ロード時に固定データがあれば使う
   if (isClosed()) {
     const saved = localStorage.getItem("finalData");
     if (saved) {
@@ -109,13 +107,12 @@
     const data = snap.data();
     if (!data) return;
 
-    // ★ 締切後
     if (isClosed()) {
       if (!fixedData) {
         localStorage.setItem("finalData", JSON.stringify(data));
         fixedData = data;
       }
-      return; // 更新しない
+      return;
     }
 
     render(data);
@@ -143,6 +140,42 @@
       container.appendChild(div);
     }
   }
+
+  /* =========================
+     ★ 管理者専用リセット（隠し＋パスコード）
+  ========================= */
+
+  const ADMIN_PASS = "1234"; // ←ここ変更してください
+
+  let tapCount = 0;
+  let lastTapTime = 0;
+
+  document.getElementById("title").addEventListener("click", () => {
+    const now = Date.now();
+
+    if (now - lastTapTime < 1000) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+
+    lastTapTime = now;
+
+    if (tapCount >= 5) {
+      tapCount = 0;
+
+      const input = prompt("管理者パスコードを入力してください");
+
+      if (input === ADMIN_PASS) {
+        if (confirm("リセットしますか？")) {
+          localStorage.removeItem("finalData");
+          location.reload();
+        }
+      } else {
+        alert("パスコードが違います");
+      }
+    }
+  });
 </script>
 
 </body>
