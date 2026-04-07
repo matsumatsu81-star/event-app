@@ -13,7 +13,6 @@
       margin: 0;
       padding: 20px;
       text-align: center;
-      overflow-x: hidden;
     }
 
     h1 {
@@ -22,7 +21,6 @@
 
     .house {
       margin-bottom: 30px;
-      transition: all 0.5s ease;
     }
 
     .house h2 {
@@ -40,6 +38,7 @@
     .img-wrap img {
       width: 100%;
       display: block;
+      transition: clip-path 0.5s ease;
     }
 
     .percent {
@@ -48,38 +47,28 @@
       opacity: 0.85;
     }
 
-    /* ★ 勝者演出 */
-    .winner {
-      transform: scale(1.2);
-      box-shadow: 0 0 30px gold;
-    }
-
-    /* ★ 結果テキスト */
-    #result {
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 32px;
-      font-weight: bold;
-      display: none;
-      animation: pop 0.8s ease;
-    }
-
-    @keyframes pop {
-      0% { transform: translate(-50%, -60%) scale(0.5); opacity: 0; }
-      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .back-btn {
+      display: block;
+      margin: 30px auto 0;
+      padding: 14px;
+      width: 80%;
+      max-width: 320px;
+      background: #1b1b1b;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 
 <body>
 
-<h1>寮別イラスト進捗</h1>
+<h1 id="title">寮別イラスト進捗</h1>
 
 <div id="houses"></div>
 
-<div id="result"></div>
+<a href="index.html" class="back-btn">トップへ戻る</a>
 
 <script type="module">
   import { db } from "./firebase.js";
@@ -94,30 +83,43 @@
   };
 
   const MAX_POINTS = 15;
-
   const container = document.getElementById("houses");
 
-  let finished = false; // ★ 一度だけ演出
-
-  function isAfter1430() {
+  /* ★ 締切 */
+  function isClosed() {
     const now = new Date();
-    return now.getHours() > 14 || (now.getHours() === 14 && now.getMinutes() >= 30);
+    const deadline = new Date();
+    deadline.setHours(14, 30, 0, 0);
+    return now >= deadline;
+  }
+
+  let fixedData = null;
+
+  if (isClosed()) {
+    const saved = localStorage.getItem("finalData");
+    if (saved) {
+      fixedData = JSON.parse(saved);
+      render(fixedData);
+    }
   }
 
   onSnapshot(doc(db, "scores", "houses"), snap => {
     const data = snap.data();
-    container.innerHTML = "";
+    if (!data) return;
 
-    let max = 0;
-    let winnerKey = null;
-
-    for (const key in HOUSE_INFO) {
-      const point = data[key] || 0;
-      if (point > max) {
-        max = point;
-        winnerKey = key;
+    if (isClosed()) {
+      if (!fixedData) {
+        localStorage.setItem("finalData", JSON.stringify(data));
+        fixedData = data;
       }
+      return;
     }
+
+    render(data);
+  });
+
+  function render(data) {
+    container.innerHTML = "";
 
     for (const key in HOUSE_INFO) {
       const point = data[key] || 0;
@@ -125,7 +127,6 @@
 
       const div = document.createElement("div");
       div.className = "house";
-      div.id = key;
 
       div.innerHTML = `
         <h2>${HOUSE_INFO[key].name}</h2>
@@ -138,18 +139,41 @@
 
       container.appendChild(div);
     }
+  }
 
-    // ★ 14:30以降の演出
-    if (isAfter1430() && !finished && winnerKey) {
-      finished = true;
+  /* =========================
+     ★ 管理者専用リセット（隠し＋パスコード）
+  ========================= */
 
-      // 勝者強調
-      document.getElementById(winnerKey).classList.add("winner");
+  const ADMIN_PASS = "1234"; // ←ここ変更してください
 
-      // 結果表示
-      const result = document.getElementById("result");
-      result.textContent = `🏆 優勝：${HOUSE_INFO[winnerKey].name}`;
-      result.style.display = "block";
+  let tapCount = 0;
+  let lastTapTime = 0;
+
+  document.getElementById("title").addEventListener("click", () => {
+    const now = Date.now();
+
+    if (now - lastTapTime < 1000) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+
+    lastTapTime = now;
+
+    if (tapCount >= 5) {
+      tapCount = 0;
+
+      const input = prompt("管理者パスコードを入力してください");
+
+      if (input === ADMIN_PASS) {
+        if (confirm("リセットしますか？")) {
+          localStorage.removeItem("finalData");
+          location.reload();
+        }
+      } else {
+        alert("パスコードが違います");
+      }
     }
   });
 </script>
