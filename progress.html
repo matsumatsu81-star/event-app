@@ -38,6 +38,7 @@
     .img-wrap img {
       width: 100%;
       display: block;
+      transition: clip-path 0.5s ease;
     }
 
     .percent {
@@ -82,11 +83,45 @@
   };
 
   const MAX_POINTS = 500;
-
   const container = document.getElementById("houses");
+
+  /* ★ 締切判定 */
+  function isClosed() {
+    const now = new Date();
+    const deadline = new Date();
+    deadline.setHours(14, 30, 0, 0);
+    return now >= deadline;
+  }
+
+  /* ★ 固定データ */
+  let fixedData = null;
+
+  // 初回ロード時に固定データがあれば使う
+  if (isClosed()) {
+    const saved = localStorage.getItem("finalData");
+    if (saved) {
+      fixedData = JSON.parse(saved);
+      render(fixedData);
+    }
+  }
 
   onSnapshot(doc(db, "scores", "houses"), snap => {
     const data = snap.data();
+    if (!data) return;
+
+    // ★ 締切後
+    if (isClosed()) {
+      if (!fixedData) {
+        localStorage.setItem("finalData", JSON.stringify(data));
+        fixedData = data;
+      }
+      return; // 更新しない
+    }
+
+    render(data);
+  });
+
+  function render(data) {
     container.innerHTML = "";
 
     for (const key in HOUSE_INFO) {
@@ -107,10 +142,8 @@
 
       container.appendChild(div);
     }
-  });
+  }
 </script>
 
 </body>
 </html>
-
-
