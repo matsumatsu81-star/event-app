@@ -59,10 +59,12 @@ export async function registerUser(uid) {
 export async function exchange(myUid, targetUid) {
 
   if (!myUid || !targetUid) {
+    alert("読み取りに失敗しました");
     return false;
   }
 
   if (myUid === targetUid) {
+    alert("同一人物とは交換できません");
     return false;
   }
 
@@ -70,6 +72,7 @@ export async function exchange(myUid, targetUid) {
   const snap = await getDoc(myRef);
 
   if (!snap.exists()) {
+    alert("ユーザー情報が見つかりません");
     return false;
   }
 
@@ -77,11 +80,15 @@ export async function exchange(myUid, targetUid) {
   const exchanged = data.exchanged || [];
   const points = data.points || 0;
 
+  // ★ 5人制限
   if (points >= 5) {
+    alert("交換は5人までです");
     return false;
   }
 
+  // ★ 重複チェック
   if (exchanged.includes(targetUid)) {
+    alert("この相手とはすでに交換済みです");
     return false;
   }
 
@@ -95,11 +102,11 @@ export async function exchange(myUid, targetUid) {
       [data.house]: increment(1)
     });
 
-    console.log("交換成功");
     return true;
 
   } catch (e) {
     console.error("交換失敗:", e);
+    alert("交換に失敗しました");
     return false;
   }
 }
