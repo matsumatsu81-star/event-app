@@ -141,9 +141,11 @@ db.collection("scores").doc("houses")
 
 function updateHouse(id, point) {
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
-  document.getElementById(id + "Percent").innerText = Math.floor(percent) + "%";
 
-  // 上から隠す（progress.htmlと同じ）
+  // ★ 小数点第1位
+  document.getElementById(id + "Percent").innerText =
+    percent.toFixed(1) + "%";
+
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
 }
