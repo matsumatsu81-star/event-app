@@ -48,13 +48,11 @@
       opacity: 0.85;
     }
 
-    /* ★ 勝者演出 */
     .winner {
       transform: scale(1.2);
       box-shadow: 0 0 30px gold;
     }
 
-    /* ★ 結果テキスト */
     #result {
       position: fixed;
       top: 40%;
@@ -97,7 +95,7 @@
 
   const container = document.getElementById("houses");
 
-  let finished = false; // ★ 一度だけ演出
+  let finished = false;
 
   function isAfter1430() {
     const now = new Date();
@@ -133,20 +131,17 @@
           <img src="${HOUSE_INFO[key].img}"
                style="clip-path: inset(${100 - percent}% 0 0 0);">
         </div>
-        <div class="percent">${Math.floor(percent)}%</div>
+        <div class="percent">${percent.toFixed(1)}%</div>
       `;
 
       container.appendChild(div);
     }
 
-    // ★ 14:30以降の演出
     if (isAfter1430() && !finished && winnerKey) {
       finished = true;
 
-      // 勝者強調
       document.getElementById(winnerKey).classList.add("winner");
 
-      // 結果表示
       const result = document.getElementById("result");
       result.textContent = `🏆 優勝：${HOUSE_INFO[winnerKey].name}`;
       result.style.display = "block";
