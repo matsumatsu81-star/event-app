@@ -59,33 +59,12 @@ h1 {
 .card.active {
   box-shadow: 0 0 60px 20px gold;
 }
-
-.reset-btn {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 10px 16px;
-  font-size: 14px;
-  background: #222;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 8px;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.reset-btn:hover {
-  opacity: 1;
-  background: #444;
-}
 </style>
 </head>
 
 <body>
 
 <h1>寮別イラスト進捗</h1>
-
-<button class="reset-btn" onclick="resetData()">リセット</button>
 
 <div class="container">
 
@@ -134,30 +113,6 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 15;
 
-function resetData() {
-  if (confirm("表示をリセットしますか？")) {
-    localStorage.removeItem("finalData");
-    location.reload();
-  }
-}
-
-function isClosed() {
-  const now = new Date();
-  const deadline = new Date();
-  deadline.setHours(14, 30, 0, 0);
-  return now >= deadline;
-}
-
-let fixedData = null;
-
-if (isClosed()) {
-  const saved = localStorage.getItem("finalData");
-  if (saved) {
-    fixedData = JSON.parse(saved);
-    render(fixedData);
-  }
-}
-
 db.collection("scores").doc("houses")
 .onSnapshot((doc) => {
 
@@ -165,18 +120,6 @@ db.collection("scores").doc("houses")
 
   const data = doc.data();
 
-  if (isClosed()) {
-    if (!fixedData) {
-      localStorage.setItem("finalData", JSON.stringify(data));
-      fixedData = data;
-    }
-    return;
-  }
-
-  render(data);
-});
-
-function render(data) {
   const gryffindor = data.gryffindor || 0;
   const slytherin = data.slytherin || 0;
   const ravenclaw = data.ravenclaw || 0;
@@ -188,20 +131,19 @@ function render(data) {
   updateHouse("hufflepuff", hufflepuff);
 
   const max = Math.max(gryffindor, slytherin, ravenclaw, hufflepuff);
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".card").forEach(card => card.classList.remove("active"));
 
   if (gryffindor === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
   if (slytherin === max && max !== 0) document.getElementById("slytherin").classList.add("active");
   if (ravenclaw === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
   if (hufflepuff === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
-}
+});
 
 function updateHouse(id, point) {
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
+  document.getElementById(id + "Percent").innerText = Math.floor(percent) + "%";
 
-  document.getElementById(id + "Percent").innerText =
-    percent.toFixed(1) + "%";
-
+  // 上から隠す（progress.htmlと同じ）
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
 }
