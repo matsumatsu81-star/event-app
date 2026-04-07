@@ -11,9 +11,9 @@
 body {
   margin: 0;
   background: #000;
-  font-family: sans-serif;
   color: white;
   text-align: center;
+  font-family: sans-serif;
 }
 
 h1 {
@@ -57,26 +57,7 @@ h1 {
 }
 
 .card.active {
-  box-shadow: 0 0 60px 20px gold;
-}
-
-.reset-btn {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 10px 16px;
-  font-size: 14px;
-  background: #222;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 8px;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.reset-btn:hover {
-  opacity: 1;
-  background: #444;
+  box-shadow: 0 0 60px gold;
 }
 </style>
 </head>
@@ -85,48 +66,18 @@ h1 {
 
 <h1>寮別イラスト進捗</h1>
 
-<button class="reset-btn" onclick="resetData()">リセット</button>
-
 <div class="container">
-
-  <div class="card" id="gryffindor">
-    <div class="img-wrap">
-      <img id="gryffindorImg" src="gryffindor.png">
-    </div>
-    <div class="percent" id="gryffindorPercent">0%</div>
-  </div>
-
-  <div class="card" id="slytherin">
-    <div class="img-wrap">
-      <img id="slytherinImg" src="slytherin.png">
-    </div>
-    <div class="percent" id="slytherinPercent">0%</div>
-  </div>
-
-  <div class="card" id="ravenclaw">
-    <div class="img-wrap">
-      <img id="ravenclawImg" src="ravenclaw.png">
-    </div>
-    <div class="percent" id="ravenclawPercent">0%</div>
-  </div>
-
-  <div class="card" id="hufflepuff">
-    <div class="img-wrap">
-      <img id="hufflepuffImg" src="hufflepuff.png">
-    </div>
-    <div class="percent" id="hufflepuffPercent">0%</div>
-  </div>
-
+  <div class="card" id="gryffindor"><img id="gryffindorImg" src="gryffindor.png"><div class="percent" id="gryffindorPercent"></div></div>
+  <div class="card" id="slytherin"><img id="slytherinImg" src="slytherin.png"><div class="percent" id="slytherinPercent"></div></div>
+  <div class="card" id="ravenclaw"><img id="ravenclawImg" src="ravenclaw.png"><div class="percent" id="ravenclawPercent"></div></div>
+  <div class="card" id="hufflepuff"><img id="hufflepuffImg" src="hufflepuff.png"><div class="percent" id="hufflepuffPercent"></div></div>
 </div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyCjvBWgetJj8I_9D5RY1jyz05zSZjD6ZfM",
+  apiKey: "AIzaSy...",
   authDomain: "enji-event2025.firebaseapp.com",
-  projectId: "enji-event2025",
-  storageBucket: "enji-event2025.firebasestorage.app",
-  messagingSenderId: "1097616247056",
-  appId: "1:1097616247056:web:a3ff71fb020289df43fd95"
+  projectId: "enji-event2025"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -134,42 +85,40 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 15;
 
-function resetData() {
-  if (confirm("表示をリセットしますか？")) {
-    localStorage.removeItem("finalData");
-    location.reload();
-  }
-}
-
 function isClosed() {
   const now = new Date();
-  const deadline = new Date();
-  deadline.setHours(14, 30, 0, 0);
-  return now >= deadline;
+  const d = new Date();
+  d.setHours(14,30,0,0);
+  return now >= d;
 }
 
 let fixedData = null;
+let alreadyClosed = false;
 
-if (isClosed()) {
-  const saved = localStorage.getItem("finalData");
-  if (saved) {
-    fixedData = JSON.parse(saved);
-    render(fixedData);
-  }
+const saved = localStorage.getItem("finalData");
+if (saved) {
+  fixedData = JSON.parse(saved);
+  alreadyClosed = true;
 }
 
 db.collection("scores").doc("houses")
-.onSnapshot((doc) => {
+.onSnapshot(doc => {
 
   if (!doc.exists) return;
-
   const data = doc.data();
 
-  if (isClosed()) {
-    if (!fixedData) {
-      localStorage.setItem("finalData", JSON.stringify(data));
-      fixedData = data;
-    }
+  const nowClosed = isClosed();
+
+  if (nowClosed && !alreadyClosed) {
+    fixedData = data;
+    localStorage.setItem("finalData", JSON.stringify(data));
+    alreadyClosed = true;
+    render(fixedData);
+    return;
+  }
+
+  if (nowClosed) {
+    render(fixedData);
     return;
   }
 
@@ -177,32 +126,32 @@ db.collection("scores").doc("houses")
 });
 
 function render(data) {
-  const gryffindor = data.gryffindor || 0;
-  const slytherin = data.slytherin || 0;
-  const ravenclaw = data.ravenclaw || 0;
-  const hufflepuff = data.hufflepuff || 0;
+  const g = data.gryffindor || 0;
+  const s = data.slytherin || 0;
+  const r = data.ravenclaw || 0;
+  const h = data.hufflepuff || 0;
 
-  updateHouse("gryffindor", gryffindor);
-  updateHouse("slytherin", slytherin);
-  updateHouse("ravenclaw", ravenclaw);
-  updateHouse("hufflepuff", hufflepuff);
+  update("gryffindor", g);
+  update("slytherin", s);
+  update("ravenclaw", r);
+  update("hufflepuff", h);
 
-  const max = Math.max(gryffindor, slytherin, ravenclaw, hufflepuff);
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+  const max = Math.max(g,s,r,h);
+  document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"));
 
-  if (gryffindor === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
-  if (slytherin === max && max !== 0) document.getElementById("slytherin").classList.add("active");
-  if (ravenclaw === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
-  if (hufflepuff === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
+  if (g===max && max!==0) document.getElementById("gryffindor").classList.add("active");
+  if (s===max && max!==0) document.getElementById("slytherin").classList.add("active");
+  if (r===max && max!==0) document.getElementById("ravenclaw").classList.add("active");
+  if (h===max && max!==0) document.getElementById("hufflepuff").classList.add("active");
 }
 
-function updateHouse(id, point) {
+function update(id, point){
   const percent = Math.min((point / MAX_POINTS) * 100, 100);
 
-  document.getElementById(id + "Percent").innerText =
+  document.getElementById(id+"Percent").innerText =
     percent.toFixed(1) + "%";
 
-  document.getElementById(id + "Img")
+  document.getElementById(id+"Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
 }
 </script>
