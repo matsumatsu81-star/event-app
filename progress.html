@@ -102,7 +102,7 @@
           <img src="${HOUSE_INFO[key].img}"
                style="clip-path: inset(${100 - percent}% 0 0 0);">
         </div>
-        <div class="percent">${Math.floor(percent)}%</div>
+        <div class="percent">${percent.toFixed(1)}%</div>
       `;
 
       container.appendChild(div);
