@@ -22,17 +22,20 @@
       text-align: center;
     }
 
-    /* ★ イベントタイトル */
+    /* ★ メインイベントタイトル */
     .event-title {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-top: 10px;
+      font-size: 20px;
+      font-weight: bold;
       line-height: 1.4;
+      margin-top: 10px;
+      margin-bottom: 20px;
     }
 
-    h1 {
-      margin-top: 8px;
-      font-size: 26px;
+    /* ★ QRタイトル */
+    .qr-title {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: bold;
     }
 
     #my-house {
@@ -56,7 +59,7 @@
       background: #fff;
       padding: 12px;
       width: fit-content;
-      margin: 20px auto;
+      margin: 10px auto 20px;
       border-radius: 10px;
     }
 
@@ -78,17 +81,18 @@
 
 <body>
 
-<!-- ★ 追加：イベントタイトル -->
+<!-- ★ 大きくしたイベントタイトル -->
 <div class="event-title">
   第31回エンジ系労組合同文体<br>
   交流イベント
 </div>
 
-<h1>マイQRコード</h1>
-
 <p id="my-house">読み込み中...</p>
 <p id="my-points"></p>
 <p id="remain"></p>
+
+<!-- ★ QRタイトルをここに移動 -->
+<div class="qr-title">マイQRコード</div>
 
 <div id="qrcode"></div>
 
@@ -122,9 +126,10 @@
       <li>参加者同士でQRコードを交換してポイントをためよう!</li>
       <li>「QRを読み取る」から、相手のQRコードを読み込みます</li>
       <li>1人あたり最大5人まで交換できます。同じ人とは交換できません</li>
-      <li>交換した人数に応じて、寮のイラストが完成していきます</li>
-      <li>〇〇時の時点のイラスト完成度に応じて景品をプレゼント！</li>
-      <li>参加賞も配布しますのでパンフレットに記載の景品引き渡し会場までお越しください。その際に所属の寮がわかるようにスマホの画面の準備をお願いします</li>
+      <li>交換した人数に応じて、個人ポイントの加算と寮のイラストが完成していきます</li>
+      <li>14時30分の時点のイラスト完成度に応じて１位の寮に景品をプレゼント！</li>
+      <li>さらに！個人ポイントに応じても景品をプレゼントします</li>
+      <li>パンフレットに記載の景品引き渡し会場までお越しください。その際に所属の寮がわかるようにスマホの画面の準備をお願いします</li>
     </ol>
 
     <button id="closeRule" class="btn" style="width:100%;">
