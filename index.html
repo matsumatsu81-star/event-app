@@ -22,8 +22,17 @@
       text-align: center;
     }
 
-    h1 {
+    /* ★ イベントタイトル */
+    .event-title {
+      font-size: 14px;
+      opacity: 0.8;
       margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    h1 {
+      margin-top: 8px;
+      font-size: 26px;
     }
 
     #my-house {
@@ -68,6 +77,12 @@
 </head>
 
 <body>
+
+<!-- ★ 追加：イベントタイトル -->
+<div class="event-title">
+  第31回エンジ系労組合同文体<br>
+  交流イベント
+</div>
 
 <h1>マイQRコード</h1>
 
@@ -141,10 +156,8 @@
       return;
     }
 
-    // 初回ユーザー登録
     await registerUser(user.uid);
 
-    // ユーザー情報をリアルタイム監視
     const userRef = doc(db, "users", user.uid);
     onSnapshot(userRef, snap => {
       if (!snap.exists()) return;
@@ -163,7 +176,6 @@
         `あと ${remain} 人と交換できます`;
     });
 
-    // QRコード生成（自分のUID）
     const qr = document.getElementById("qrcode");
     qr.innerHTML = "";
     new QRCode(qr, {
@@ -173,7 +185,6 @@
     });
   });
 
-  // ルール説明モーダル制御
   document.getElementById("ruleBtn").onclick = () => {
     document.getElementById("ruleModal").style.display = "block";
   };
@@ -182,7 +193,6 @@
     document.getElementById("ruleModal").style.display = "none";
   };
 
-  // PWA
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
   }
@@ -190,5 +200,3 @@
 
 </body>
 </html>
-
-
