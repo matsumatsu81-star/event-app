@@ -82,11 +82,47 @@
   };
 
   const MAX_POINTS = 15;
-
   const container = document.getElementById("houses");
+
+  // ★ 締切判定
+  function isClosed() {
+    const now = new Date();
+    const deadline = new Date();
+    deadline.setHours(10, 45, 0, 0);
+    return now >= deadline;
+  }
+
+  let fixedData = null;
+
+  // ★ すでに締切後なら保存データを使う
+  if (isClosed()) {
+    const saved = localStorage.getItem("finalData");
+    if (saved) {
+      fixedData = JSON.parse(saved);
+      render(fixedData);
+    }
+  }
 
   onSnapshot(doc(db, "scores", "houses"), snap => {
     const data = snap.data();
+    if (!data) return;
+
+    // ★ 締切後の処理
+    if (isClosed()) {
+      if (!fixedData) {
+        // 初回だけ保存（＝14:30時点の値）
+        localStorage.setItem("finalData", JSON.stringify(data));
+        fixedData = data;
+        render(fixedData);
+      }
+      return; // ← 更新しない
+    }
+
+    // 通常表示
+    render(data);
+  });
+
+  function render(data) {
     container.innerHTML = "";
 
     for (const key in HOUSE_INFO) {
@@ -107,7 +143,7 @@
 
       container.appendChild(div);
     }
-  });
+  }
 </script>
 
 </body>
