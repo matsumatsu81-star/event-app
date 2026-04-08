@@ -71,7 +71,7 @@
 
 <script type="module">
   import { db } from "./firebase.js";
-  import { doc, onSnapshot } from
+  import { doc, onSnapshot, getDoc } from
     "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const HOUSE_INFO = {
@@ -82,11 +82,29 @@
   };
 
   const MAX_POINTS = 15;
-
   const container = document.getElementById("houses");
 
-  onSnapshot(doc(db, "scores", "houses"), snap => {
-    const data = snap.data();
+  let isLocked = false;
+
+  // ★ ① finalデータを先に確認（これが最重要）
+  const finalRef = doc(db, "scores", "final");
+  const finalSnap = await getDoc(finalRef);
+
+  if (finalSnap.exists()) {
+    // ★ 全端末で固定表示
+    isLocked = true;
+    render(finalSnap.data());
+  } else {
+    // ★ 通常リアルタイム更新
+    onSnapshot(doc(db, "scores", "houses"), snap => {
+      if (!snap.exists()) return;
+      if (isLocked) return;
+
+      render(snap.data());
+    });
+  }
+
+  function render(data) {
     container.innerHTML = "";
 
     for (const key in HOUSE_INFO) {
@@ -107,7 +125,7 @@
 
       container.appendChild(div);
     }
-  });
+  }
 </script>
 
 </body>
