@@ -36,12 +36,6 @@ h1 {
   background: #1e1e1e;
   border-radius: 40px;
   padding: 20px;
-  transition: 0.4s;
-}
-
-.card.winner {
-  transform: scale(1.2);
-  box-shadow: 0 0 60px gold;
 }
 
 .img-wrap {
@@ -64,29 +58,38 @@ h1 {
   font-weight: bold;
 }
 
-/* 優勝テキスト */
+.card.active {
+  box-shadow: 0 0 60px 20px gold;
+}
+
+/* ★ 優勝テキスト */
 #winnerText {
   position: fixed;
   top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 60px;
+  font-size: 64px;
   font-weight: bold;
   color: gold;
   display: none;
-  z-index: 1000;
-  text-align: center;
-  line-height: 1.4;
+  z-index: 10;
+  animation: pop 0.6s ease;
 }
 
-/* 紙吹雪 */
+@keyframes pop {
+  0% { transform: translate(-50%, -70%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ★ 紙吹雪 */
 .confetti {
   position: fixed;
-  width: 10px;
-  height: 10px;
   top: -10px;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
   animation: fall linear forwards;
-  z-index: 999;
+  z-index: 5;
 }
 
 @keyframes fall {
@@ -112,6 +115,8 @@ h1 {
 <body>
 
 <h1>寮別イラスト進捗</h1>
+
+<div id="winnerText"></div>
 
 <div class="container">
   <div class="card" id="gryffindor">
@@ -143,9 +148,6 @@ h1 {
   </div>
 </div>
 
-<div id="winnerText"></div>
-
-<!-- 管理者パネル -->
 <div id="adminPanel">
   <button onclick="lockProgress()">締切</button>
   <button onclick="unlockProgress()">解除</button>
@@ -171,31 +173,22 @@ const HOUSE_NAME = {
 };
 
 let isLocked = false;
-let animationPlayed = false;
+let confettiStarted = false;
 
 /* =========================
-   ★ final監視
+   ★ final優先ロジック
 ========================= */
 
 db.collection("scores").doc("final")
 .onSnapshot(doc => {
   if (doc.exists) {
     isLocked = true;
-    const data = doc.data();
-    render(data);
-
-    if (!animationPlayed) {
-      animationPlayed = true;
-      showWinner(data);
-    }
-
+    render(doc.data());
+    showWinner(doc.data());
   } else {
     isLocked = false;
-    animationPlayed = false;
   }
 });
-
-/* ========================= */
 
 db.collection("scores").doc("houses")
 .onSnapshot(doc => {
@@ -215,12 +208,12 @@ function render(data) {
   updateHouse("hufflepuff", h);
 
   const max = Math.max(g, s, r, h);
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("winner"));
+  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
 
-  if (g === max && max !== 0) document.getElementById("gryffindor").classList.add("winner");
-  if (s === max && max !== 0) document.getElementById("slytherin").classList.add("winner");
-  if (r === max && max !== 0) document.getElementById("ravenclaw").classList.add("winner");
-  if (h === max && max !== 0) document.getElementById("hufflepuff").classList.add("winner");
+  if (g === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
+  if (s === max && max !== 0) document.getElementById("slytherin").classList.add("active");
+  if (r === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
+  if (h === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
 }
 
 function updateHouse(id, point) {
@@ -234,48 +227,50 @@ function updateHouse(id, point) {
 }
 
 /* =========================
-   ★ 優勝演出（寮名付き）
+   ★ 優勝演出
 ========================= */
 
 function showWinner(data) {
-  let max = 0;
-  let winner = null;
-
-  for (const key in data) {
-    if (data[key] > max) {
-      max = data[key];
-      winner = key;
-    }
-  }
-
-  if (!winner) return;
+  const entries = Object.entries(data);
+  const winner = entries.reduce((a,b)=> a[1]>b[1]?a:b);
 
   const text = document.getElementById("winnerText");
-  text.innerHTML = `🏆 優勝<br>${HOUSE_NAME[winner]}`;
+  text.innerText = `🏆 優勝！${HOUSE_NAME[winner[0]]}`;
   text.style.display = "block";
 
-  launchConfetti();
+  startConfettiLoop();
 }
 
-/* ========================= */
+/* ★ 紙吹雪を繰り返し */
+function startConfettiLoop() {
+  if (confettiStarted) return;
+  confettiStarted = true;
 
-function launchConfetti() {
-  const colors = ["#ff0", "#f00", "#0ff", "#0f0", "#fff"];
+  setInterval(() => {
+    for (let i = 0; i < 40; i++) {
+      createConfetti();
+    }
+  }, 800);
+}
 
-  for (let i = 0; i < 150; i++) {
-    const c = document.createElement("div");
-    c.className = "confetti";
-    c.style.left = Math.random() * 100 + "vw";
-    c.style.background = colors[Math.floor(Math.random() * colors.length)];
-    c.style.animationDuration = (2 + Math.random() * 2) + "s";
+function createConfetti() {
+  const el = document.createElement("div");
+  el.className = "confetti";
 
-    document.body.appendChild(c);
-    setTimeout(() => c.remove(), 4000);
-  }
+  el.style.left = Math.random() * 100 + "vw";
+  el.style.backgroundColor =
+    ["#FFD700","#FF3B3B","#4CAF50","#2196F3","#FFEB3B"]
+    [Math.floor(Math.random()*5)];
+
+  el.style.animationDuration = (2 + Math.random()*2) + "s";
+
+  document.body.appendChild(el);
+
+  setTimeout(() => el.remove(), 4000);
 }
 
 /* =========================
-   ★ 管理者
+   ★ 管理者機能
 ========================= */
 
 const ADMIN_PASS = "1234";
@@ -286,8 +281,11 @@ let lastTap = 0;
 document.querySelector("h1").addEventListener("click", () => {
   const now = Date.now();
 
-  if (now - lastTap < 1000) tapCount++;
-  else tapCount = 1;
+  if (now - lastTap < 1000) {
+    tapCount++;
+  } else {
+    tapCount = 1;
+  }
 
   lastTap = now;
 
