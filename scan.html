@@ -16,7 +16,7 @@
       color: #fff;
       font-family: sans-serif;
       text-align: center;
-      transition: background 0.2s ease; /* ★ 光る用 */
+      transition: background 0.2s ease;
     }
 
     h1 {
@@ -67,6 +67,10 @@
   let myUid = null;
   let scanning = true;
 
+  // ★ 追加：連続スキャン防止
+  let lastScanTime = 0;
+  const SCAN_COOLDOWN = 2000; // 2秒
+
   auth.onAuthStateChanged(user => {
     if (!user) {
       document.getElementById("status").textContent =
@@ -78,10 +82,14 @@
   });
 
   function flashEffect() {
-    document.body.style.background = "#064"; // ★ 緑に光る
+    document.body.style.background = "#064";
     setTimeout(() => {
       document.body.style.background = "#000";
     }, 200);
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   function startScan() {
@@ -97,10 +105,17 @@
       html5QrCode.start(
         { facingMode: "environment" },
         {
-          fps: 10,
+          fps: 8, // ★ 少し下げて負荷軽減
           qrbox: { width: 250, height: 250 }
         },
         async decodedText => {
+
+          const now = Date.now();
+
+          // ★ クールダウン中は無視
+          if (now - lastScanTime < SCAN_COOLDOWN) return;
+          lastScanTime = now;
+
           if (!scanning) return;
           scanning = false;
 
@@ -108,27 +123,30 @@
             "交換処理中…";
 
           try {
+            // ★ 少し待機（集中アクセス防止）
+            await sleep(300);
+
             const result = await exchange(myUid, decodedText);
 
             if (result) {
               document.getElementById("status").textContent =
                 "交換成立しました！";
 
-              // ★ 光る（全端末）
               flashEffect();
 
-              // ★ バイブ（Androidなど対応端末のみ）
               if (navigator.vibrate) {
                 navigator.vibrate([100, 50, 100]);
               }
 
-              // ★ 成功時のみ停止
+              // ★ 成功時は完全停止
               html5QrCode.stop();
 
             } else {
               document.getElementById("status").textContent =
                 "交換できませんでした";
 
+              // ★ 少し待ってから再開（連打防止）
+              await sleep(1000);
               scanning = true;
             }
 
@@ -137,6 +155,7 @@
             document.getElementById("status").textContent =
               "エラーが発生しました";
 
+            await sleep(1000);
             scanning = true;
           }
         }
