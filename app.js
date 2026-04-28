@@ -3,7 +3,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
   increment,
   serverTimestamp,
   collection,
@@ -55,7 +54,7 @@ export async function registerUser(uid) {
 }
 
 /**
- * 交換処理（トランザクション版）
+ * 交換処理（負荷分散版）
  */
 export async function exchange(myUid, targetUid) {
 
@@ -72,6 +71,9 @@ export async function exchange(myUid, targetUid) {
   const myRef = doc(db, "users", myUid);
 
   try {
+    // ★ ランダム遅延（0〜200ms）
+    await new Promise(r => setTimeout(r, Math.random() * 200));
+
     await runTransaction(db, async (tx) => {
 
       const snap = await tx.get(myRef);
@@ -84,23 +86,19 @@ export async function exchange(myUid, targetUid) {
       const exchanged = data.exchanged || [];
       const points = data.points || 0;
 
-      // ★ 5人制限
       if (points >= 5) {
         throw new Error("limit");
       }
 
-      // ★ 重複チェック
       if (exchanged.includes(targetUid)) {
         throw new Error("duplicate");
       }
 
-      // ★ 自分の更新
       tx.update(myRef, {
         points: points + 1,
         exchanged: [...exchanged, targetUid]
       });
 
-      // ★ スコア更新
       tx.update(doc(db, "scores", "houses"), {
         [data.house]: increment(1)
       });
@@ -112,7 +110,6 @@ export async function exchange(myUid, targetUid) {
   } catch (e) {
     console.error("交換失敗:", e);
 
-    // ★ エラーごとにメッセージ分岐
     if (e.message === "limit") {
       alert("交換は5人までです");
     } else if (e.message === "duplicate") {
