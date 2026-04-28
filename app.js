@@ -7,7 +7,8 @@ import {
   increment,
   serverTimestamp,
   collection,
-  getDocs
+  getDocs,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
@@ -54,7 +55,7 @@ export async function registerUser(uid) {
 }
 
 /**
- * 交換処理
+ * 交換処理（トランザクション版）
  */
 export async function exchange(myUid, targetUid) {
 
@@ -69,44 +70,59 @@ export async function exchange(myUid, targetUid) {
   }
 
   const myRef = doc(db, "users", myUid);
-  const snap = await getDoc(myRef);
-
-  if (!snap.exists()) {
-    alert("ユーザー情報が見つかりません");
-    return false;
-  }
-
-  const data = snap.data();
-  const exchanged = data.exchanged || [];
-  const points = data.points || 0;
-
-  // ★ 5人制限
-  if (points >= 5) {
-    alert("交換は5人までです");
-    return false;
-  }
-
-  // ★ 重複チェック
-  if (exchanged.includes(targetUid)) {
-    alert("この相手とはすでに交換済みです");
-    return false;
-  }
 
   try {
-    await updateDoc(myRef, {
-      points: increment(1),
-      exchanged: [...exchanged, targetUid]
-    });
+    await runTransaction(db, async (tx) => {
 
-    await updateDoc(doc(db, "scores", "houses"), {
-      [data.house]: increment(1)
+      const snap = await tx.get(myRef);
+
+      if (!snap.exists()) {
+        throw new Error("no-user");
+      }
+
+      const data = snap.data();
+      const exchanged = data.exchanged || [];
+      const points = data.points || 0;
+
+      // ★ 5人制限
+      if (points >= 5) {
+        throw new Error("limit");
+      }
+
+      // ★ 重複チェック
+      if (exchanged.includes(targetUid)) {
+        throw new Error("duplicate");
+      }
+
+      // ★ 自分の更新
+      tx.update(myRef, {
+        points: points + 1,
+        exchanged: [...exchanged, targetUid]
+      });
+
+      // ★ スコア更新
+      tx.update(doc(db, "scores", "houses"), {
+        [data.house]: increment(1)
+      });
+
     });
 
     return true;
 
   } catch (e) {
     console.error("交換失敗:", e);
-    alert("交換に失敗しました");
+
+    // ★ エラーごとにメッセージ分岐
+    if (e.message === "limit") {
+      alert("交換は5人までです");
+    } else if (e.message === "duplicate") {
+      alert("この相手とはすでに交換済みです");
+    } else if (e.message === "no-user") {
+      alert("ユーザー情報が見つかりません");
+    } else {
+      alert("交換に失敗しました");
+    }
+
     return false;
   }
 }
