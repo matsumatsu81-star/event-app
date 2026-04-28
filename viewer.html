@@ -14,6 +14,7 @@ body {
   font-family: sans-serif;
   color: white;
   text-align: center;
+  overflow: hidden;
 }
 
 h1 {
@@ -35,6 +36,12 @@ h1 {
   background: #1e1e1e;
   border-radius: 40px;
   padding: 20px;
+  transition: 0.4s;
+}
+
+.card.winner {
+  transform: scale(1.2);
+  box-shadow: 0 0 60px gold;
 }
 
 .img-wrap {
@@ -57,8 +64,33 @@ h1 {
   font-weight: bold;
 }
 
-.card.active {
-  box-shadow: 0 0 60px 20px gold;
+/* 優勝テキスト */
+#winnerText {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 60px;
+  font-weight: bold;
+  color: gold;
+  display: none;
+  z-index: 1000;
+}
+
+/* 紙吹雪 */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: fall linear forwards;
+  z-index: 999;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
 }
 
 /* 管理パネル */
@@ -109,6 +141,8 @@ h1 {
   </div>
 </div>
 
+<div id="winnerText"></div>
+
 <!-- 管理者パネル -->
 <div id="adminPanel">
   <button onclick="lockProgress()">締切</button>
@@ -127,29 +161,44 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 15;
 
+let isLocked = false;
+let animationPlayed = false;
+
 /* =========================
-   ★ final優先ロジック
+   ★ final監視
 ========================= */
 
-let isLocked = false;
-
-// final監視
 db.collection("scores").doc("final")
 .onSnapshot(doc => {
   if (doc.exists) {
     isLocked = true;
-    render(doc.data());
+    const data = doc.data();
+    render(data);
+
+    if (!animationPlayed) {
+      animationPlayed = true;
+      showWinner(data);
+    }
+
   } else {
     isLocked = false;
+    animationPlayed = false;
   }
 });
 
-// houses監視（リアルタイム）
+/* =========================
+   ★ 通常更新
+========================= */
+
 db.collection("scores").doc("houses")
 .onSnapshot(doc => {
   if (!doc.exists || isLocked) return;
   render(doc.data());
 });
+
+/* =========================
+   ★ 描画
+========================= */
 
 function render(data) {
   const g = data.gryffindor || 0;
@@ -163,12 +212,12 @@ function render(data) {
   updateHouse("hufflepuff", h);
 
   const max = Math.max(g, s, r, h);
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".card").forEach(c => c.classList.remove("winner"));
 
-  if (g === max && max !== 0) document.getElementById("gryffindor").classList.add("active");
-  if (s === max && max !== 0) document.getElementById("slytherin").classList.add("active");
-  if (r === max && max !== 0) document.getElementById("ravenclaw").classList.add("active");
-  if (h === max && max !== 0) document.getElementById("hufflepuff").classList.add("active");
+  if (g === max && max !== 0) document.getElementById("gryffindor").classList.add("winner");
+  if (s === max && max !== 0) document.getElementById("slytherin").classList.add("winner");
+  if (r === max && max !== 0) document.getElementById("ravenclaw").classList.add("winner");
+  if (h === max && max !== 0) document.getElementById("hufflepuff").classList.add("winner");
 }
 
 function updateHouse(id, point) {
@@ -179,6 +228,51 @@ function updateHouse(id, point) {
 
   document.getElementById(id + "Img")
     .style.clipPath = `inset(${100 - percent}% 0 0 0)`;
+}
+
+/* =========================
+   ★ 優勝演出
+========================= */
+
+function showWinner(data) {
+  let max = 0;
+  let winner = null;
+
+  for (const key in data) {
+    if (data[key] > max) {
+      max = data[key];
+      winner = key;
+    }
+  }
+
+  if (!winner) return;
+
+  document.getElementById("winnerText").innerText =
+    "🏆 優勝！";
+
+  document.getElementById("winnerText").style.display = "block";
+
+  launchConfetti();
+}
+
+/* =========================
+   ★ 紙吹雪
+========================= */
+
+function launchConfetti() {
+  const colors = ["#ff0", "#f00", "#0ff", "#0f0", "#fff"];
+
+  for (let i = 0; i < 150; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.animationDuration = (2 + Math.random() * 2) + "s";
+
+    document.body.appendChild(c);
+
+    setTimeout(() => c.remove(), 4000);
+  }
 }
 
 /* =========================
@@ -193,11 +287,8 @@ let lastTap = 0;
 document.querySelector("h1").addEventListener("click", () => {
   const now = Date.now();
 
-  if (now - lastTap < 1000) {
-    tapCount++;
-  } else {
-    tapCount = 1;
-  }
+  if (now - lastTap < 1000) tapCount++;
+  else tapCount = 1;
 
   lastTap = now;
 
