@@ -75,6 +75,8 @@ h1 {
   color: gold;
   display: none;
   z-index: 1000;
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* 紙吹雪 */
@@ -161,6 +163,13 @@ const db = firebase.firestore();
 
 const MAX_POINTS = 15;
 
+const HOUSE_NAME = {
+  gryffindor: "グリフィンドール",
+  slytherin: "スリザリン",
+  ravenclaw: "レイブンクロー",
+  hufflepuff: "ハッフルパフ"
+};
+
 let isLocked = false;
 let animationPlayed = false;
 
@@ -186,19 +195,13 @@ db.collection("scores").doc("final")
   }
 });
 
-/* =========================
-   ★ 通常更新
-========================= */
+/* ========================= */
 
 db.collection("scores").doc("houses")
 .onSnapshot(doc => {
   if (!doc.exists || isLocked) return;
   render(doc.data());
 });
-
-/* =========================
-   ★ 描画
-========================= */
 
 function render(data) {
   const g = data.gryffindor || 0;
@@ -231,7 +234,7 @@ function updateHouse(id, point) {
 }
 
 /* =========================
-   ★ 優勝演出
+   ★ 優勝演出（寮名付き）
 ========================= */
 
 function showWinner(data) {
@@ -247,17 +250,14 @@ function showWinner(data) {
 
   if (!winner) return;
 
-  document.getElementById("winnerText").innerText =
-    "🏆 優勝！";
-
-  document.getElementById("winnerText").style.display = "block";
+  const text = document.getElementById("winnerText");
+  text.innerHTML = `🏆 優勝<br>${HOUSE_NAME[winner]}`;
+  text.style.display = "block";
 
   launchConfetti();
 }
 
-/* =========================
-   ★ 紙吹雪
-========================= */
+/* ========================= */
 
 function launchConfetti() {
   const colors = ["#ff0", "#f00", "#0ff", "#0f0", "#fff"];
@@ -270,13 +270,12 @@ function launchConfetti() {
     c.style.animationDuration = (2 + Math.random() * 2) + "s";
 
     document.body.appendChild(c);
-
     setTimeout(() => c.remove(), 4000);
   }
 }
 
 /* =========================
-   ★ 管理者機能
+   ★ 管理者
 ========================= */
 
 const ADMIN_PASS = "1234";
